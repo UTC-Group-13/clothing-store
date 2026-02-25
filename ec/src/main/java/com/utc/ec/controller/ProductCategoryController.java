@@ -19,44 +19,30 @@ public class ProductCategoryController {
 
     @PostMapping
     public ApiResponse<ProductCategoryDTO> create(@RequestBody ProductCategoryDTO dto) {
-        return ApiResponse.<ProductCategoryDTO>builder()
-                .success(true)
-                .message(messageSource.getMessage("productCategory.create.success", null, LocaleContextHolder.getLocale()))
-                .data(service.create(dto))
-                .build();
+        String message = messageSource.getMessage("productCategory.create.success", null, LocaleContextHolder.getLocale());
+        return ApiResponse.success(message, service.create(dto));
     }
 
     @PutMapping("/{id}")
     public ApiResponse<ProductCategoryDTO> update(@PathVariable Integer id, @RequestBody ProductCategoryDTO dto) {
-        return ApiResponse.<ProductCategoryDTO>builder()
-                .success(true)
-                .message(messageSource.getMessage("productCategory.update.success", null, LocaleContextHolder.getLocale()))
-                .data(service.update(id, dto))
-                .build();
+        String message = messageSource.getMessage("productCategory.update.success", null, LocaleContextHolder.getLocale());
+        return ApiResponse.success(message, service.update(id, dto));
     }
 
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Integer id) {
         service.delete(id);
-        return ApiResponse.<Void>builder()
-                .success(true)
-                .message(messageSource.getMessage("productCategory.delete.success", null, LocaleContextHolder.getLocale()))
-                .build();
+        String message = messageSource.getMessage("productCategory.delete.success", null, LocaleContextHolder.getLocale());
+        return ApiResponse.success(message, null);
     }
 
     @GetMapping("/{id}")
     public ApiResponse<ProductCategoryDTO> getById(@PathVariable Integer id) {
-        return ApiResponse.<ProductCategoryDTO>builder()
-                .success(true)
-                .data(service.getById(id))
-                .build();
+        return ApiResponse.success(null, service.getById(id));
     }
 
     @GetMapping
     public ApiResponse<List<ProductCategoryDTO>> getAll() {
-        return ApiResponse.<List<ProductCategoryDTO>>builder()
-                .success(true)
-                .data(service.getAll())
-                .build();
+        return ApiResponse.success(null, service.getAll());
     }
 }
