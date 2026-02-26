@@ -45,9 +45,11 @@ CREATE TABLE address
 CREATE TABLE site_user
 (
     id            INT AUTO_INCREMENT,
-    email_address VARCHAR(350),
+    username      VARCHAR(100) NOT NULL UNIQUE,
+    email_address VARCHAR(350) UNIQUE,
     phone_number  VARCHAR(20),
-    password      VARCHAR(500),
+    password      VARCHAR(500) NOT NULL,
+    role          VARCHAR(20)  NOT NULL DEFAULT 'USER',
     CONSTRAINT pk_user PRIMARY KEY (id)
 );
 CREATE TABLE user_address
