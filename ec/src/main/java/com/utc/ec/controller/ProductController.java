@@ -1,6 +1,7 @@
 package com.utc.ec.controller;
 
 import com.utc.ec.dto.ApiResponse;
+import com.utc.ec.dto.PagedResponse;
 import com.utc.ec.dto.ProductDTO;
 import com.utc.ec.service.ProductService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,6 +10,10 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -64,12 +69,70 @@ public class ProductController {
                 .build();
     }
 
-    @Operation(summary = "Lấy tất cả sản phẩm", description = "Lấy danh sách tất cả sản phẩm")
+    @Operation(summary = "Lấy tất cả sản phẩm", description = "Lấy danh sách tất cả sản phẩm (không phân trang)")
     @GetMapping
     public ApiResponse<List<ProductDTO>> getAll() {
         return ApiResponse.<List<ProductDTO>>builder()
                 .success(true)
                 .data(service.getAll())
+                .build();
+    }
+
+    @Operation(summary = "Lấy sản phẩm có phân trang", description = "Lấy danh sách sản phẩm với phân trang và sắp xếp")
+    @GetMapping("/paged")
+    public ApiResponse<PagedResponse<ProductDTO>> getAllPaged(
+            @Parameter(description = "Số trang (bắt đầu từ 0)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Số lượng item mỗi trang") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Trường sắp xếp") @RequestParam(defaultValue = "id") String sortBy,
+            @Parameter(description = "Hướng sắp xếp (ASC/DESC)") @RequestParam(defaultValue = "ASC") String direction) {
+
+        Sort sort = direction.equalsIgnoreCase("DESC") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<ProductDTO> pagedResult = service.getAllPaged(pageable);
+
+        PagedResponse<ProductDTO> response = PagedResponse.<ProductDTO>builder()
+                .content(pagedResult.getContent())
+                .pageNumber(pagedResult.getNumber())
+                .pageSize(pagedResult.getSize())
+                .totalElements(pagedResult.getTotalElements())
+                .totalPages(pagedResult.getTotalPages())
+                .last(pagedResult.isLast())
+                .first(pagedResult.isFirst())
+                .build();
+
+        return ApiResponse.<PagedResponse<ProductDTO>>builder()
+                .success(true)
+                .data(response)
+                .build();
+    }
+
+    @Operation(summary = "Tìm kiếm sản phẩm", description = "Tìm kiếm sản phẩm theo từ khóa và category với phân trang")
+    @GetMapping("/search")
+    public ApiResponse<PagedResponse<ProductDTO>> searchProducts(
+            @Parameter(description = "Từ khóa tìm kiếm (tên, mô tả)") @RequestParam(required = false) String keyword,
+            @Parameter(description = "ID danh mục") @RequestParam(required = false) Integer categoryId,
+            @Parameter(description = "Số trang (bắt đầu từ 0)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Số lượng item mỗi trang") @RequestParam(defaultValue = "10") int size,
+            @Parameter(description = "Trường sắp xếp") @RequestParam(defaultValue = "id") String sortBy,
+            @Parameter(description = "Hướng sắp xếp (ASC/DESC)") @RequestParam(defaultValue = "ASC") String direction) {
+
+        Sort sort = direction.equalsIgnoreCase("DESC") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<ProductDTO> pagedResult = service.searchProducts(keyword, categoryId, pageable);
+
+        PagedResponse<ProductDTO> response = PagedResponse.<ProductDTO>builder()
+                .content(pagedResult.getContent())
+                .pageNumber(pagedResult.getNumber())
+                .pageSize(pagedResult.getSize())
+                .totalElements(pagedResult.getTotalElements())
+                .totalPages(pagedResult.getTotalPages())
+                .last(pagedResult.isLast())
+                .first(pagedResult.isFirst())
+                .build();
+
+        return ApiResponse.<PagedResponse<ProductDTO>>builder()
+                .success(true)
+                .data(response)
                 .build();
     }
 }

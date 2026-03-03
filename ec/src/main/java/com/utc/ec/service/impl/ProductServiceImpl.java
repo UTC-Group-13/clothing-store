@@ -6,6 +6,8 @@ import com.utc.ec.repository.ProductRepository;
 import com.utc.ec.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.BeanUtils;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -58,5 +60,22 @@ public class ProductServiceImpl implements ProductService {
             return dto;
         }).collect(Collectors.toList());
     }
-}
 
+    @Override
+    public Page<ProductDTO> getAllPaged(Pageable pageable) {
+        return repository.findAll(pageable).map(entity -> {
+            ProductDTO dto = new ProductDTO();
+            BeanUtils.copyProperties(entity, dto);
+            return dto;
+        });
+    }
+
+    @Override
+    public Page<ProductDTO> searchProducts(String keyword, Integer categoryId, Pageable pageable) {
+        return repository.searchProducts(keyword, categoryId, pageable).map(entity -> {
+            ProductDTO dto = new ProductDTO();
+            BeanUtils.copyProperties(entity, dto);
+            return dto;
+        });
+    }
+}
