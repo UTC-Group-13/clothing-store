@@ -35,3 +35,27 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Environment Files ###
+.env
+.env.local
+.env.*.local
+
+### Docker ###
+*.tar.gz
+*.tar
+
+### Uploads ###
+uploads/
+*.log
+logs/
+
+### Maven ###
+ec/target/
+ec/.mvn/
+ec/mvnw
+ec/mvnw.cmd
+
+### macOS ###
+.DS_Store
+

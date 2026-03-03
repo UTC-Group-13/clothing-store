@@ -29,6 +29,22 @@ springdoc:
   api-docs:
     path: /v3/api-docs
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
 jwt:
   secret: ${JWT_SECRET:3cfa76ef14937c1c0ea519f8fc057a80fcd04a7420f8e8bcd0a7567c272e007b}
   expiration: ${JWT_EXPIRATION:86400000}
@@ -38,6 +54,6 @@ jwt:
 # ============================================================
 file:
   upload:
-    dir: ${FILE_UPLOAD_DIR:uploads/images}      # Thư mục lưu file trên disk
-    url-prefix: /uploads/images                  # Prefix URL để FE truy cập ảnh
+    dir: ${FILE_UPLOAD_DIR:D:\CODE\uploads\images}      # Thư mục lưu file trên disk
+    url-prefix: D:\CODE\uploads\images                # Prefix URL để FE truy cập ảnh
 
