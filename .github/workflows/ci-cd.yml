@@ -152,8 +152,8 @@ jobs:
               -e JWT_SECRET="${{ secrets.JWT_SECRET }}" \
               -e JWT_EXPIRATION="${{ secrets.JWT_EXPIRATION || 86400000 }}" \
               -e FILE_UPLOAD_DIR="/app/uploads/images" \
-              -v /opt/clothing-store/uploads:/app/uploads \
-              -v /opt/clothing-store/logs:/app/logs \
+              -v /home/clothing-store/uploads:/app/uploads \
+              -v /home/clothing-store/logs:/app/logs \
               $IMAGE_NAME
             
             # Clean up old images
