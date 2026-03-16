@@ -14,6 +14,12 @@ import java.util.List;
 public interface ProductItemRepository extends JpaRepository<ProductItem, Integer> {
     List<ProductItem> findByProductId(Integer productId);
 
+    // Kiểm tra SKU đã tồn tại chưa
+    boolean existsBySku(String sku);
+
+    // Kiểm tra SKU đã tồn tại chưa (bỏ qua record hiện tại khi update)
+    boolean existsBySkuAndIdNot(String sku, Integer id);
+
     @Query("SELECT pi FROM ProductItem pi WHERE " +
            "(:keyword IS NULL OR :keyword = '' OR " +
            "LOWER(pi.sku) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +

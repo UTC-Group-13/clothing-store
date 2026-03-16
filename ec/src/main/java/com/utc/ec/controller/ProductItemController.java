@@ -6,7 +6,9 @@ import com.utc.ec.dto.ProductItemDTO;
 import com.utc.ec.service.ProductItemService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
@@ -27,8 +29,9 @@ public class ProductItemController {
     private final MessageSource messageSource;
 
     @Operation(summary = "Tạo product item", description = "Tạo mới một product item")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping
-    public ApiResponse<ProductItemDTO> create(@RequestBody ProductItemDTO dto) {
+    public ApiResponse<ProductItemDTO> create(@Valid @RequestBody ProductItemDTO dto) {
         return ApiResponse.<ProductItemDTO>builder()
                 .success(true)
                 .message(messageSource.getMessage("productItem.create.success", null, LocaleContextHolder.getLocale()))
@@ -37,10 +40,11 @@ public class ProductItemController {
     }
 
     @Operation(summary = "Cập nhật product item", description = "Cập nhật thông tin product item theo ID")
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping("/{id}")
     public ApiResponse<ProductItemDTO> update(
             @Parameter(description = "ID product item cần cập nhật") @PathVariable Integer id,
-            @RequestBody ProductItemDTO dto) {
+            @Valid @RequestBody ProductItemDTO dto) {
         return ApiResponse.<ProductItemDTO>builder()
                 .success(true)
                 .message(messageSource.getMessage("productItem.update.success", null, LocaleContextHolder.getLocale()))
@@ -49,6 +53,7 @@ public class ProductItemController {
     }
 
     @Operation(summary = "Xóa product item", description = "Xóa product item theo ID")
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(
             @Parameter(description = "ID product item cần xóa") @PathVariable Integer id) {

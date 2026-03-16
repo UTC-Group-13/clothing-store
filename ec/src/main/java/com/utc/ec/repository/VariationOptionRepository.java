@@ -14,6 +14,12 @@ import java.util.List;
 public interface VariationOptionRepository extends JpaRepository<VariationOption, Integer> {
     List<VariationOption> findByVariationId(Integer variationId);
 
+    // Kiểm tra giá trị đã tồn tại trong cùng 1 variation chưa
+    boolean existsByVariationIdAndValue(Integer variationId, String value);
+
+    // Kiểm tra variation có đang có option nào không (dùng khi xóa variation)
+    boolean existsByVariationId(Integer variationId);
+
     @Query("SELECT vo FROM VariationOption vo WHERE " +
            "(:keyword IS NULL OR :keyword = '' OR " +
            "LOWER(vo.value) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +

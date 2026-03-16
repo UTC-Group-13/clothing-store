@@ -9,4 +9,6 @@ public interface ProductCategoryService {
     void delete(Integer id);
     ProductCategoryDTO getById(Integer id);
     List<ProductCategoryDTO> getAll();
+    List<ProductCategoryDTO> getRootCategories();
+    List<ProductCategoryDTO> getChildren(Integer parentId);
 }

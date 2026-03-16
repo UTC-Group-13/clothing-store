@@ -14,6 +14,9 @@ import java.util.List;
 public interface VariationRepository extends JpaRepository<Variation, Integer> {
     List<Variation> findByCategoryId(Integer categoryId);
 
+    // Kiểm tra tên thuộc tính đã tồn tại trong cùng 1 category chưa
+    boolean existsByNameAndCategoryId(String name, Integer categoryId);
+
     @Query("SELECT v FROM Variation v WHERE " +
            "(:keyword IS NULL OR :keyword = '' OR " +
            "LOWER(v.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) AND " +
