@@ -2,6 +2,7 @@ package com.utc.ec.service.impl;
 
 import com.utc.ec.config.security.JwtService;
 import com.utc.ec.dto.auth.AuthResponse;
+import com.utc.ec.dto.auth.PasswordRequest;
 import com.utc.ec.dto.auth.LoginRequest;
 import com.utc.ec.dto.auth.RegisterRequest;
 import com.utc.ec.entity.SiteUser;
@@ -15,6 +16,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -67,6 +70,26 @@ public class AuthServiceImpl implements AuthService {
         String token = jwtService.generateToken(userDetails);
 
         return buildAuthResponse(token, user);
+    }
+
+    @Override
+    public String changePassword(PasswordRequest passwordRequest) {
+        SiteUser user = siteUserRepository.findById(passwordRequest.getUserId())
+                .orElseThrow(() -> new BusinessException("auth.user.notFound"));
+
+        if (!passwordEncoder.matches(passwordRequest.getOldPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("pass.old.incorrect");
+        }
+        if (passwordEncoder.matches(passwordRequest.getNewPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("pass.old.differences");
+        }
+
+        if (!Objects.equals(passwordRequest.getNewPassword(), passwordRequest.getVerifyPassword())) {
+            throw new IllegalArgumentException("pass.old.verify");
+        }
+        user.setPassword(passwordEncoder.encode(passwordRequest.getNewPassword()));
+        siteUserRepository.save(user);
+        return "Đổi mật khẩu thành công";
     }
 
     private AuthResponse buildAuthResponse(String token, SiteUser user) {

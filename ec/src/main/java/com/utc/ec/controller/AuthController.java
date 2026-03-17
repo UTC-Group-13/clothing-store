@@ -2,6 +2,7 @@ package com.utc.ec.controller;
 
 import com.utc.ec.dto.ApiResponse;
 import com.utc.ec.dto.auth.AuthResponse;
+import com.utc.ec.dto.auth.PasswordRequest;
 import com.utc.ec.dto.auth.LoginRequest;
 import com.utc.ec.dto.auth.RegisterRequest;
 import com.utc.ec.service.AuthService;
@@ -37,6 +38,12 @@ public class AuthController {
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse authResponse = authService.login(request);
         return ResponseEntity.ok(ApiResponse.success("Đăng nhập thành công", authResponse));
+    }
+
+    @PostMapping("/change-password")
+    @Operation(summary = "Đăng nhập", description = "Thay đổi mật khẩu")
+    public ResponseEntity<ApiResponse<String>> changePassword(@Valid @RequestBody PasswordRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(authService.changePassword(request), ""));
     }
 }
 
