@@ -59,8 +59,19 @@ public class SecurityConfig {
                                 "/api/colors/**",
                                 "/api/sizes/**",
                                 "/api/product-variants/**",
-                                "/api/variant-stocks/**"
+                                "/api/variant-stocks/**",
+                                "/api/payment-types",
+                                "/api/payment-types/**",
+                                "/api/shipping-methods",
+                                "/api/shipping-methods/**",
+                                "/api/order-statuses",
+                                "/api/order-statuses/**"
                         ).permitAll()
+                        .requestMatchers(
+                                "/api/cart/**",
+                                "/api/payment-methods/**",
+                                "/api/orders/**"
+                        ).authenticated()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
