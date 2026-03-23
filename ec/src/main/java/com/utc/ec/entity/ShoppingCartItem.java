@@ -14,9 +14,8 @@ public class ShoppingCartItem {
     @Column(name = "cart_id")
     private Integer cartId;
 
-    @Column(name = "product_item_id")
-    private Integer productItemId;
+    @Column(name = "variant_stock_id")
+    private Integer variantStockId;
 
     private Integer qty;
 }
-

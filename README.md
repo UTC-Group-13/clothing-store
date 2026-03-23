@@ -54,7 +54,7 @@ git clone <repository-url>
 cd clothing-store/ec
 
 # 2. Cấu hình database (application.yml hoặc biến môi trường)
-$env:SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/ecommerce"
+$env:SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/clothing_db"
 $env:SPRING_DATASOURCE_USERNAME="root"
 $env:SPRING_DATASOURCE_PASSWORD="your_password"
 
@@ -189,13 +189,24 @@ POST   /api/files/upload           - Upload ảnh (Admin)
 
 ## 🗂️ DATABASE SCHEMA
 
-### 23 Tables
+### 21 Tables (clothing_db)
 **Authentication:** site_user, user_address, address, country, user_payment_method, payment_type  
-**Product Catalog:** product, product_item, product_category, variation, variation_option, product_configuration  
+**Product Catalog:** categories, colors, sizes, products, product_variants, variant_stocks  
 **Shopping:** shopping_cart, shopping_cart_item  
 **Orders:** shop_order, order_line, order_status, shipping_method  
 **Marketing:** promotion, promotion_category  
 **Reviews:** user_review
+
+### Luồng sản phẩm quần áo
+```
+categories (danh mục cha/con)
+    └── products (sản phẩm + base_price, brand, material)
+            └── product_variants (sản phẩm × màu sắc)
+                    └── variant_stocks (biến thể × size = SKU + tồn kho + giá riêng)
+
+colors (bảng màu sắc riêng)
+sizes  (bảng size riêng: clothing/numeric/shoes)
+```
 
 > **ER Diagram:** Xem [SYSTEM_FLOW_DIAGRAM.md](SYSTEM_FLOW_DIAGRAM.md) → Phần "Database Relationships"
 
@@ -235,7 +246,7 @@ docker-compose up -d
 ### Environment Variables
 ```powershell
 # Database
-SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/ecommerce
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/clothing_db
 SPRING_DATASOURCE_USERNAME=root
 SPRING_DATASOURCE_PASSWORD=your_password
 

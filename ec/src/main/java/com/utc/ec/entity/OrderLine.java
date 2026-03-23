@@ -12,10 +12,10 @@ public class OrderLine {
     @Column(name = "id")
     private Integer id;
 
-    @Column(name = "product_item_id") // FK -> product_item(id)
-    private Integer productItemId;
+    @Column(name = "variant_stock_id")
+    private Integer variantStockId;
 
-    @Column(name = "order_id") // FK -> shop_order(id)
+    @Column(name = "order_id")
     private Integer orderId;
 
     @Column(name = "qty")
@@ -24,4 +24,3 @@ public class OrderLine {
     @Column(name = "price")
     private Integer price;
 }
-

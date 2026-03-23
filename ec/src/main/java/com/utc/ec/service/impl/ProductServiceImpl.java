@@ -2,20 +2,24 @@ package com.utc.ec.service.impl;
 
 import com.utc.ec.dto.ProductDTO;
 import com.utc.ec.entity.Product;
+import com.utc.ec.entity.ProductVariant;
 import com.utc.ec.exception.BusinessException;
 import com.utc.ec.exception.ResourceNotFoundException;
-import com.utc.ec.repository.ProductCategoryRepository;
-import com.utc.ec.repository.ProductItemRepository;
+import com.utc.ec.mapper.ProductMapper;
+import com.utc.ec.repository.CategoryRepository;
 import com.utc.ec.repository.ProductRepository;
+import com.utc.ec.repository.ProductVariantRepository;
+import com.utc.ec.repository.spec.ProductSpecification;
 import com.utc.ec.service.ProductService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.BeanUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,21 +27,23 @@ import java.util.stream.Collectors;
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository repository;
-    private final ProductCategoryRepository categoryRepository;
-    private final ProductItemRepository productItemRepository;
+    private final CategoryRepository categoryRepository;
+    private final ProductVariantRepository variantRepository;
+    private final ProductMapper mapper;
 
     @Override
     @Transactional
     public ProductDTO create(ProductDTO dto) {
-        // Validate category tồn tại nếu có
         if (dto.getCategoryId() != null && !categoryRepository.existsById(dto.getCategoryId())) {
             throw new ResourceNotFoundException("product.categoryNotFound", dto.getCategoryId());
         }
+        if (repository.existsBySlug(dto.getSlug())) {
+            throw new BusinessException("product.slugExists", dto.getSlug());
+        }
 
-        Product entity = new Product();
-        BeanUtils.copyProperties(dto, entity);
+        Product entity = mapper.toEntity(dto);
         entity.setId(null);
-        return toDto(repository.save(entity));
+        return mapper.toDto(repository.save(entity));
     }
 
     @Override
@@ -46,16 +52,19 @@ public class ProductServiceImpl implements ProductService {
         Product entity = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("product.notFound", id));
 
-        // Validate category tồn tại nếu thay đổi
         if (dto.getCategoryId() != null && !dto.getCategoryId().equals(entity.getCategoryId())) {
             if (!categoryRepository.existsById(dto.getCategoryId())) {
                 throw new ResourceNotFoundException("product.categoryNotFound", dto.getCategoryId());
             }
         }
+        if (dto.getSlug() != null && !dto.getSlug().equals(entity.getSlug())
+                && repository.existsBySlugAndIdNot(dto.getSlug(), id)) {
+            throw new BusinessException("product.slugExists", dto.getSlug());
+        }
 
-        BeanUtils.copyProperties(dto, entity);
+        mapper.updateEntityFromDto(dto, entity);
         entity.setId(id);
-        return toDto(repository.save(entity));
+        return mapper.toDto(repository.save(entity));
     }
 
     @Override
@@ -64,22 +73,33 @@ public class ProductServiceImpl implements ProductService {
         if (!repository.existsById(id)) {
             throw new ResourceNotFoundException("product.notFound", id);
         }
-        // Không xóa nếu có product_item
-        if (!productItemRepository.findByProductId(id).isEmpty()) {
-            throw new BusinessException("product.hasItems");
+        if (variantRepository.existsByProductId(id)) {
+            throw new BusinessException("product.hasVariants");
         }
         repository.deleteById(id);
     }
 
     @Override
     public ProductDTO getById(Integer id) {
-        return toDto(repository.findById(id)
+        ProductDTO dto = mapper.toDto(repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("product.notFound", id)));
+        enrichThumbnail(dto);
+        return dto;
+    }
+
+    @Override
+    public ProductDTO getBySlug(String slug) {
+        ProductDTO dto = mapper.toDto(repository.findBySlug(slug)
+                .orElseThrow(() -> new ResourceNotFoundException("product.notFound")));
+        enrichThumbnail(dto);
+        return dto;
     }
 
     @Override
     public List<ProductDTO> getAll() {
-        return repository.findAll().stream().map(this::toDto).collect(Collectors.toList());
+        List<ProductDTO> dtos = mapper.toDtoList(repository.findAll());
+        enrichThumbnails(dtos);
+        return dtos;
     }
 
     @Override
@@ -87,22 +107,71 @@ public class ProductServiceImpl implements ProductService {
         if (!categoryRepository.existsById(categoryId)) {
             throw new ResourceNotFoundException("product.categoryNotFound", categoryId);
         }
-        return repository.findByCategoryId(categoryId).stream().map(this::toDto).collect(Collectors.toList());
+        List<ProductDTO> dtos = mapper.toDtoList(repository.findByCategoryId(categoryId));
+        enrichThumbnails(dtos);
+        return dtos;
     }
 
     @Override
     public Page<ProductDTO> getAllPaged(Pageable pageable) {
-        return repository.findAll(pageable).map(this::toDto);
+        Page<ProductDTO> page = repository.findAll(pageable).map(mapper::toDto);
+        enrichThumbnails(page.getContent());
+        return page;
     }
 
     @Override
-    public Page<ProductDTO> searchProducts(String keyword, Integer categoryId, Pageable pageable) {
-        return repository.searchProducts(keyword, categoryId, pageable).map(this::toDto);
+    public Page<ProductDTO> searchProducts(String name, List<Integer> categoryIds, BigDecimal minPrice,
+                                           BigDecimal maxPrice, List<Integer> colorIds, Boolean isActive,
+                                           Pageable pageable) {
+        Page<ProductDTO> page = repository.findAll(
+                ProductSpecification.withFilters(name, categoryIds, minPrice, maxPrice, colorIds, isActive),
+                pageable
+        ).map(mapper::toDto);
+        enrichThumbnails(page.getContent());
+        return page;
     }
 
-    private ProductDTO toDto(Product entity) {
-        ProductDTO dto = new ProductDTO();
-        BeanUtils.copyProperties(entity, dto);
-        return dto;
+    // ===================== Thumbnail Enrichment =====================
+
+    /**
+     * Enrich a single ProductDTO with thumbnailUrl from its default variant.
+     */
+    private void enrichThumbnail(ProductDTO dto) {
+        if (dto == null || dto.getId() == null) return;
+        variantRepository.findByProductIdAndIsDefaultTrue(dto.getId())
+                .or(() -> variantRepository.findFirstByProductIdOrderByIdAsc(dto.getId()))
+                .ifPresent(v -> dto.setThumbnailUrl(v.getColorImageUrl()));
+    }
+
+    /**
+     * Batch enrich a list of ProductDTOs with thumbnailUrl (avoids N+1 queries).
+     */
+    private void enrichThumbnails(List<ProductDTO> dtos) {
+        if (dtos == null || dtos.isEmpty()) return;
+
+        List<Integer> productIds = dtos.stream()
+                .map(ProductDTO::getId)
+                .collect(Collectors.toList());
+
+        // Batch fetch default variants
+        Map<Integer, String> thumbnailMap = variantRepository
+                .findByProductIdInAndIsDefaultTrue(productIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        ProductVariant::getProductId,
+                        ProductVariant::getColorImageUrl,
+                        (existing, replacement) -> existing // keep first if duplicate
+                ));
+
+        for (ProductDTO dto : dtos) {
+            String url = thumbnailMap.get(dto.getId());
+            if (url != null) {
+                dto.setThumbnailUrl(url);
+            } else {
+                // Fallback: fetch first variant for products without a default
+                variantRepository.findFirstByProductIdOrderByIdAsc(dto.getId())
+                        .ifPresent(v -> dto.setThumbnailUrl(v.getColorImageUrl()));
+            }
+        }
     }
 }

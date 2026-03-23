@@ -5,7 +5,7 @@ import lombok.Data;
 @Data
 public class OrderLineDTO {
     private Integer id;
-    private Integer productItemId;
+    private Integer variantStockId;
     private Integer orderId;
     private Integer qty;
     private Integer price;
