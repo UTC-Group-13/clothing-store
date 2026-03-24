@@ -21,6 +21,7 @@ public class SampleDataServiceImpl implements SampleDataService {
     private final CategoryRepository categoryRepo;
     private final ColorRepository colorRepo;
     private final SizeRepository sizeRepo;
+    private final CountryRepository countryRepo;
     private final ProductRepository productRepo;
     private final ProductVariantRepository variantRepo;
     private final VariantStockRepository stockRepo;
@@ -54,11 +55,16 @@ public class SampleDataServiceImpl implements SampleDataService {
         shippingMethodRepo.deleteAll();
         paymentTypeRepo.deleteAll();
         orderStatusRepo.deleteAll();
+        countryRepo.deleteAll();
         
         // CRITICAL: Flush và clear persistence context để đảm bảo data thực sự bị xóa
         entityManager.flush();
         entityManager.clear();
         log.info("✓ Đã xóa sạch dữ liệu cũ.");
+
+        // 0. Tạo countries (cần có trước address)
+        int totalCountries = createCountries();
+        log.info("✓ Đã tạo {} quốc gia.", totalCountries);
 
         // 1. Tạo danh mục sản phẩm
         Map<String, Category> cats = createCategories();
@@ -116,6 +122,34 @@ public class SampleDataServiceImpl implements SampleDataService {
 
         log.info("=== HOÀN TẤT TẠO DỮ LIỆU MẪU ===");
         return result;
+    }
+
+    // ========================================================================
+    //  0. COUNTRIES (cần có trước khi tạo address)
+    // ========================================================================
+    private int createCountries() {
+        // Don't delete here - already deleted at start
+        
+        String[] countries = {
+            "Việt Nam",
+            "Hoa Kỳ",
+            "Nhật Bản",
+            "Hàn Quốc",
+            "Trung Quốc",
+            "Thái Lan",
+            "Singapore",
+            "Malaysia",
+            "Indonesia",
+            "Philippines"
+        };
+
+        for (String countryName : countries) {
+            Country country = new Country();
+            country.setCountryName(countryName);
+            countryRepo.save(country);
+        }
+
+        return countries.length;
     }
 
     // ========================================================================
