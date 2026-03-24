@@ -3,6 +3,7 @@ package com.utc.ec.service.impl;
 import com.utc.ec.entity.*;
 import com.utc.ec.repository.*;
 import com.utc.ec.service.SampleDataService;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,55 +17,101 @@ import java.util.*;
 @RequiredArgsConstructor
 public class SampleDataServiceImpl implements SampleDataService {
 
+    private final EntityManager entityManager;
     private final CategoryRepository categoryRepo;
     private final ColorRepository colorRepo;
     private final SizeRepository sizeRepo;
     private final ProductRepository productRepo;
     private final ProductVariantRepository variantRepo;
     private final VariantStockRepository stockRepo;
+    private final PaymentTypeRepository paymentTypeRepo;
+    private final ShippingMethodRepository shippingMethodRepo;
+    private final OrderStatusRepository orderStatusRepo;
+    private final ShopBankAccountRepository shopBankAccountRepo;
+    private final UserReviewRepository userReviewRepo;
+    private final OrderLineRepository orderLineRepo;
+    private final ShopOrderRepository shopOrderRepo;
+    private final ShoppingCartItemRepository cartItemRepo;
 
     @Override
     @Transactional
     public String generateSampleData() {
         log.info("=== BẮT ĐẦU TẠO DỮ LIỆU MẪU ===");
 
-        // Xóa dữ liệu cũ (theo thứ tự FK)
+        // Xóa dữ liệu cũ (theo đúng thứ tự FK - từ con đến cha)
+        log.info("Đang xóa dữ liệu cũ...");
+        userReviewRepo.deleteAll();
+        orderLineRepo.deleteAll();
+        shopOrderRepo.deleteAll();
+        cartItemRepo.deleteAll();
         stockRepo.deleteAll();
         variantRepo.deleteAll();
         productRepo.deleteAll();
         sizeRepo.deleteAll();
         colorRepo.deleteAll();
         categoryRepo.deleteAll();
-        log.info("Đã xóa sạch dữ liệu cũ.");
+        shopBankAccountRepo.deleteAll();
+        shippingMethodRepo.deleteAll();
+        paymentTypeRepo.deleteAll();
+        orderStatusRepo.deleteAll();
+        
+        // CRITICAL: Flush và clear persistence context để đảm bảo data thực sự bị xóa
+        entityManager.flush();
+        entityManager.clear();
+        log.info("✓ Đã xóa sạch dữ liệu cũ.");
 
-        // 1. Tạo danh mục
+        // 1. Tạo danh mục sản phẩm
         Map<String, Category> cats = createCategories();
-        log.info("Đã tạo {} danh mục.", cats.size());
+        log.info("✓ Đã tạo {} danh mục.", cats.size());
 
         // 2. Tạo màu sắc
         Map<String, Color> colors = createColors();
-        log.info("Đã tạo {} màu sắc.", colors.size());
+        log.info("✓ Đã tạo {} màu sắc.", colors.size());
 
-        // 3. Tạo size
+        // 3. Tạo sizes
         Map<String, Size> sizes = createSizes();
-        log.info("Đã tạo {} sizes.", sizes.size());
+        log.info("✓ Đã tạo {} sizes.", sizes.size());
 
-        // 4. Tạo 50 sản phẩm + biến thể + tồn kho
+        // 4. Tạo trạng thái đơn hàng (dữ liệu hệ thống - cần có trước)
+        int totalOrderStatuses = createOrderStatuses();
+        log.info("✓ Đã tạo {} trạng thái đơn hàng.", totalOrderStatuses);
+
+        // 5. Tạo loại thanh toán
+        int totalPaymentTypes = createPaymentTypes();
+        log.info("✓ Đã tạo {} loại thanh toán.", totalPaymentTypes);
+
+        // 6. Tạo phương thức vận chuyển
+        int totalShippingMethods = createShippingMethods();
+        log.info("✓ Đã tạo {} phương thức vận chuyển.", totalShippingMethods);
+
+        // 7. Tạo tài khoản ngân hàng shop
+        int totalBankAccounts = createShopBankAccounts();
+        log.info("✓ Đã tạo {} tài khoản ngân hàng shop.", totalBankAccounts);
+
+        // 8. Tạo 50 sản phẩm + biến thể + tồn kho
         int totalProducts = createProducts(cats, colors, sizes);
-        log.info("Đã tạo {} sản phẩm.", totalProducts);
+        log.info("✓ Đã tạo {} sản phẩm.", totalProducts);
 
         long totalVariants = variantRepo.count();
         long totalStocks = stockRepo.count();
 
         String result = String.format(
-                "Tạo dữ liệu mẫu thành công!\n" +
-                "- Danh mục: %d\n" +
-                "- Màu sắc: %d\n" +
-                "- Sizes: %d\n" +
-                "- Sản phẩm: %d\n" +
-                "- Biến thể (product×color): %d\n" +
-                "- Tồn kho (variant×size): %d",
+                "✅ TẠO DỮ LIỆU MẪU THÀNH CÔNG!\n\n" +
+                "📊 THỐNG KÊ:\n" +
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n" +
+                "  • Danh mục sản phẩm:        %,d\n" +
+                "  • Màu sắc:                  %,d\n" +
+                "  • Sizes:                    %,d\n" +
+                "  • Trạng thái đơn hàng:      %,d\n" +
+                "  • Loại thanh toán:          %,d\n" +
+                "  • Phương thức vận chuyển:   %,d\n" +
+                "  • Tài khoản ngân hàng shop: %,d\n" +
+                "  • Sản phẩm:                 %,d\n" +
+                "  • Biến thể (product×color): %,d\n" +
+                "  • Tồn kho (variant×size):   %,d\n" +
+                "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
                 cats.size(), colors.size(), sizes.size(),
+                totalOrderStatuses, totalPaymentTypes, totalShippingMethods, totalBankAccounts,
                 totalProducts, totalVariants, totalStocks);
 
         log.info("=== HOÀN TẤT TẠO DỮ LIỆU MẪU ===");
@@ -169,6 +216,8 @@ public class SampleDataServiceImpl implements SampleDataService {
         for (String label : new String[]{"26", "27", "28", "29", "30", "31", "32", "33", "34", "36"}) {
             map.put("n-" + label, saveSize(label, "numeric", i++));
         }
+        // Freesize (phụ kiện, đồ lót một cỡ)
+        map.put("f-Freesize", saveSize("Freesize", "freesize", 0));
         return map;
     }
 
@@ -181,7 +230,96 @@ public class SampleDataServiceImpl implements SampleDataService {
     }
 
     // ========================================================================
-    //  4. PRODUCTS (50 sản phẩm) + VARIANTS + STOCKS
+    //  4. ORDER STATUSES (dữ liệu hệ thống - bắt buộc cho order workflow)
+    // ========================================================================
+    private int createOrderStatuses() {
+        // Don't delete here - already deleted at start
+        
+        String[] statuses = {
+            "PENDING",      // Chờ xử lý
+            "PROCESSING",   // Đang xử lý
+            "SHIPPED",      // Đang giao hàng
+            "DELIVERED",    // Đã giao hàng
+            "CANCELLED"     // Đã hủy
+        };
+
+        for (String statusName : statuses) {
+            OrderStatus status = new OrderStatus();
+            status.setStatus(statusName);
+            orderStatusRepo.save(status);
+        }
+
+        return statuses.length;
+    }
+
+    // ========================================================================
+    //  5. PAYMENT TYPES  (chỉ 2 loại hệ thống hỗ trợ)
+    //     - COD: thanh toán khi nhận hàng
+    //     - Chuyển khoản ngân hàng: trả QR VietQR, ADMIN kiểm tra thủ công
+    // ========================================================================
+    private int createPaymentTypes() {
+        // Don't delete here - already deleted at start
+        
+        PaymentType cod = new PaymentType();
+        cod.setValue("COD");
+        paymentTypeRepo.save(cod);
+
+        PaymentType transfer = new PaymentType();
+        transfer.setValue("Chuyển khoản ngân hàng");
+        paymentTypeRepo.save(transfer);
+
+        return 2;
+    }
+
+    // ========================================================================
+    //  6. SHIPPING METHODS
+    // ========================================================================
+    private int createShippingMethods() {
+        // Don't delete here - already deleted at start
+        
+        Object[][] methods = {
+            {"Giao hàng tiêu chuẩn",  20000},
+            {"Giao hàng nhanh",        35000},
+            {"Giao hàng hỏa tốc",     60000},
+            {"Nhận tại cửa hàng",          0}
+        };
+
+        for (Object[] m : methods) {
+            ShippingMethod sm = new ShippingMethod();
+            sm.setName((String) m[0]);
+            sm.setPrice((Integer) m[1]);
+            shippingMethodRepo.save(sm);
+        }
+        return methods.length;
+    }
+
+    // ========================================================================
+    //  7. SHOP BANK ACCOUNTS (tài khoản ngân hàng shop — dùng cho QR)
+    // ========================================================================
+    private int createShopBankAccounts() {
+        // Don't delete here - already deleted at start
+        
+        ShopBankAccount mb = new ShopBankAccount();
+        mb.setBankId("MB");
+        mb.setBankName("Ngân hàng TMCP Quân Đội (MB Bank)");
+        mb.setAccountNumber("0365123456");
+        mb.setAccountHolderName("NGUYEN VAN A");
+        mb.setIsActive(true);
+        shopBankAccountRepo.save(mb);
+
+        ShopBankAccount vcb = new ShopBankAccount();
+        vcb.setBankId("VCB");
+        vcb.setBankName("Ngân hàng TMCP Ngoại thương (Vietcombank)");
+        vcb.setAccountNumber("1021234567");
+        vcb.setAccountHolderName("NGUYEN VAN A");
+        vcb.setIsActive(false);
+        shopBankAccountRepo.save(vcb);
+
+        return 2;
+    }
+
+    // ========================================================================
+    //  8. PRODUCTS (50 sản phẩm) + VARIANTS + STOCKS
     // ========================================================================
     private int createProducts(Map<String, Category> cats,
                                Map<String, Color> colors,
@@ -240,6 +378,10 @@ public class SampleDataServiceImpl implements SampleDataService {
         // Dùng clothing sizes cho váy / đầm
         List<Size> dressSizes = List.of(
             sizes.get("c-XS"), sizes.get("c-S"), sizes.get("c-M"), sizes.get("c-L"), sizes.get("c-XL")
+        );
+        // Freesize cho phụ kiện
+        List<Size> freeSizes = List.of(
+            sizes.get("f-Freesize")
         );
 
         List<ProductDef> defs = new ArrayList<>();
@@ -502,12 +644,12 @@ public class SampleDataServiceImpl implements SampleDataService {
         defs.add(new ProductDef("Nón Lưỡi Trai Unisex", "non-luoi-trai-unisex",
                 "Nón lưỡi trai (baseball cap) unisex, vải cotton wash mềm, khóa điều chỉnh.",
                 "phu-kien", 149000, "Routine", "Cotton Washed",
-                new String[]{"den","trang","xanh-navy","be"}, null, imgPhuKien1));
+                new String[]{"den","trang","xanh-navy","be"}, freeSizes, imgPhuKien1));
 
         defs.add(new ProductDef("Thắt Lưng Da Bò Khóa Kim", "that-lung-da-bo-khoa-kim",
                 "Thắt lưng da bò thật 100%, khóa kim cổ điển, bề rộng 3.5cm.",
                 "phu-kien", 299000, "Owen", "Da bò thật",
-                new String[]{"den","nau"}, null, imgPhuKien2));
+                new String[]{"den","nau"}, freeSizes, imgPhuKien2));
 
         // ─── Tạo tất cả sản phẩm ────────────────────────────────
         Random random = new Random(42);
@@ -550,26 +692,22 @@ public class SampleDataServiceImpl implements SampleDataService {
             v = variantRepo.save(v);
             firstColor = false;
 
-            // Tạo variant_stocks cho mỗi size (nếu có)
-            if (def.sizes != null) {
-                for (Size size : def.sizes) {
-                    VariantStock vs = new VariantStock();
-                    vs.setVariantId(v.getId());
-                    vs.setSizeId(size.getId());
-                    vs.setStockQty(20 + random.nextInt(80)); // 20-99
-                    // 30% cơ hội có giá riêng (±10% so với base_price)
-                    if (random.nextInt(10) < 3) {
-                        double factor = 0.9 + random.nextDouble() * 0.2; // 0.9 – 1.1
-                        long override = Math.round(def.basePrice * factor / 1000.0) * 1000;
-                        vs.setPriceOverride(BigDecimal.valueOf(override));
-                    }
-                    // SKU format: P{productId}-V{variantId}-S{sizeId}
-                    // e.g. P1-V3-S5  — always unique
-                    String sku = String.format("P%d-V%d-%s",
-                            p.getId(), v.getId(), size.getLabel().toUpperCase());
-                    vs.setSku(sku);
-                    stockRepo.save(vs);
+            // Tạo variant_stocks cho mỗi size
+            for (Size size : def.sizes) {
+                VariantStock vs = new VariantStock();
+                vs.setVariantId(v.getId());
+                vs.setSizeId(size.getId());
+                vs.setStockQty(20 + random.nextInt(80)); // 20-99
+                // 30% cơ hội có giá riêng (±10% so với base_price)
+                if (random.nextInt(10) < 3) {
+                    double factor = 0.9 + random.nextDouble() * 0.2; // 0.9 – 1.1
+                    long override = Math.round(def.basePrice * factor / 1000.0) * 1000;
+                    vs.setPriceOverride(BigDecimal.valueOf(override));
                 }
+                String sku = String.format("P%d-V%d-%s",
+                        p.getId(), v.getId(), size.getLabel().toUpperCase());
+                vs.setSku(sku);
+                stockRepo.save(vs);
             }
         }
     }

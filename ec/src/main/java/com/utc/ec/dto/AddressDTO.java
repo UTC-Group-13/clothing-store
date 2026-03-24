@@ -13,5 +13,6 @@ public class AddressDTO {
     private String region;
     private String postalCode;
     private Integer countryId;
+    private Boolean isDefault;
 }
 

@@ -65,12 +65,14 @@ public class SecurityConfig {
                                 "/api/shipping-methods",
                                 "/api/shipping-methods/**",
                                 "/api/order-statuses",
-                                "/api/order-statuses/**"
+                                "/api/order-statuses/**",
+                                "/api/shop-bank-accounts/active"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/cart/**",
                                 "/api/payment-methods/**",
-                                "/api/orders/**"
+                                "/api/orders/**",
+                                "/api/addresses/**"
                         ).authenticated()
                         .anyRequest().authenticated()
                 )

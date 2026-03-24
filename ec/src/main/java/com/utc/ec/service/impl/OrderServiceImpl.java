@@ -12,7 +12,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -27,7 +30,8 @@ public class OrderServiceImpl implements OrderService {
     private final ShippingMethodRepository  shippingMethodRepository;
     private final AddressRepository         addressRepository;
     private final UserAddressRepository     userAddressRepository;
-    private final UserPaymentMethodRepository paymentMethodRepository;
+    private final PaymentTypeRepository     paymentTypeRepository;
+    private final ShopBankAccountRepository shopBankAccountRepository;
     private final ShoppingCartRepository    cartRepository;
     private final ShoppingCartItemRepository cartItemRepository;
     private final VariantStockRepository    variantStockRepository;
@@ -36,6 +40,9 @@ public class OrderServiceImpl implements OrderService {
     private final ColorRepository           colorRepository;
     private final SizeRepository            sizeRepository;
     private final SiteUserRepository        userRepository;
+
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
+    private static final String VIETQR_TEMPLATE = "https://img.vietqr.io/image/%s-%s-compact2.png?amount=%d&addInfo=%s&accountName=%s";
 
     // =====================================================================
     //  USER operations
@@ -46,22 +53,22 @@ public class OrderServiceImpl implements OrderService {
     public OrderDetailDTO placeOrder(String username, OrderRequest request) {
         SiteUser user = getUser(username);
 
-        // 1. Kiem tra payment method thuoc ve user
-        paymentMethodRepository.findByIdAndUserId(request.getPaymentMethodId(), user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("order.paymentNotFound",
-                        request.getPaymentMethodId()));
+        // 1. Kiểm tra loại thanh toán
+        PaymentType paymentType = paymentTypeRepository.findById(request.getPaymentTypeId())
+                .orElseThrow(() -> new ResourceNotFoundException("payment.typeNotFound",
+                        request.getPaymentTypeId()));
 
-        // 2. Kiem tra dia chi giao hang thuoc ve user
+        // 2. Kiểm tra địa chỉ giao hàng thuộc về user
         if (!userAddressRepository.existsByUserIdAndAddressId(user.getId(), request.getShippingAddressId())) {
             throw new BusinessException("order.addressNotBelongToUser", request.getShippingAddressId());
         }
 
-        // 3. Kiem tra phuong thuc van chuyen
+        // 3. Kiểm tra phương thức vận chuyển
         ShippingMethod shippingMethod = shippingMethodRepository.findById(request.getShippingMethodId())
                 .orElseThrow(() -> new ResourceNotFoundException("shipping.notFound",
                         request.getShippingMethodId()));
 
-        // 4. Lay gio hang
+        // 4. Lấy giỏ hàng
         ShoppingCart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new BusinessException("order.cartEmpty"));
 
@@ -70,7 +77,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("order.cartEmpty");
         }
 
-        // 5. Kiem tra ton kho va tinh toan subtotal
+        // 5. Kiểm tra tồn kho và tính toán subtotal
         Map<Integer, VariantStock> stockMap = variantStockRepository
                 .findAllById(cartItems.stream().map(ShoppingCartItem::getVariantStockId).collect(Collectors.toList()))
                 .stream().collect(Collectors.toMap(VariantStock::getId, Function.identity()));
@@ -90,25 +97,30 @@ public class OrderServiceImpl implements OrderService {
             subtotal += unitPrice * cartItem.getQty();
         }
 
-        // 6. Lay trang thai PENDING
+        // 6. Lấy trạng thái PENDING
         OrderStatus pendingStatus = orderStatusRepository
                 .findByStatus(OrderStatusServiceImpl.STATUS_PENDING)
                 .orElseThrow(() -> new BusinessException("order.pendingStatusNotConfigured"));
 
-        // 7. Tao don hang
+        // 7. Sinh mã đơn hàng (DH + yyyyMMdd + số thứ tự 3 chữ số)
+        String orderCode = generateOrderCode();
+
+        // 8. Tạo đơn hàng
         int orderTotal = subtotal + (shippingMethod.getPrice() != null ? shippingMethod.getPrice() : 0);
 
         ShopOrder order = new ShopOrder();
         order.setUserId(user.getId());
         order.setOrderDate(LocalDateTime.now());
-        order.setPaymentMethodId(request.getPaymentMethodId());
+        order.setOrderCode(orderCode);
+        order.setPaymentTypeId(paymentType.getId());
+        order.setPaymentNote(request.getNote());
         order.setShippingAddress(request.getShippingAddressId());
         order.setShippingMethod(request.getShippingMethodId());
         order.setOrderTotal(orderTotal);
         order.setOrderStatus(pendingStatus.getId());
         order = orderRepository.save(order);
 
-        // 8. Tao order lines va tru ton kho
+        // 9. Tạo order lines và trừ tồn kho
         for (ShoppingCartItem cartItem : cartItems) {
             VariantStock stock = stockMap.get(cartItem.getVariantStockId());
             int unitPrice = resolveUnitPrice(stock, productByVariantId);
@@ -120,12 +132,12 @@ public class OrderServiceImpl implements OrderService {
             line.setPrice(unitPrice);
             orderLineRepository.save(line);
 
-            // Tru ton kho
+            // Trừ tồn kho
             stock.setStockQty(stock.getStockQty() - cartItem.getQty());
             variantStockRepository.save(stock);
         }
 
-        // 9. Lam trong gio hang
+        // 10. Làm trống giỏ hàng
         cartItemRepository.deleteByCartId(cart.getId());
 
         return buildOrderDetail(order);
@@ -153,17 +165,14 @@ public class OrderServiceImpl implements OrderService {
         ShopOrder order = orderRepository.findByIdAndUserId(orderId, user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("order.notFound", orderId));
 
-        // Chi duoc huy khi trang thai la PENDING
         OrderStatus currentStatus = orderStatusRepository.findById(order.getOrderStatus()).orElse(null);
         if (currentStatus == null
                 || !OrderStatusServiceImpl.STATUS_PENDING.equalsIgnoreCase(currentStatus.getStatus())) {
             throw new BusinessException("order.cannotCancel");
         }
 
-        // Khoi phuc ton kho
         restoreStock(order.getId());
 
-        // Cap nhat trang thai → CANCELLED
         OrderStatus cancelledStatus = orderStatusRepository
                 .findByStatus(OrderStatusServiceImpl.STATUS_CANCELLED)
                 .orElseThrow(() -> new BusinessException("order.cancelledStatusNotConfigured"));
@@ -219,8 +228,25 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * Giai quyet don gia: price_override neu co, nguoc lai dung base_price
+     * Sinh mã đơn hàng: DH + yyyyMMdd + 3 chữ số (VD: DH20260324001)
      */
+    private String generateOrderCode() {
+        String datePrefix = "DH" + LocalDateTime.now().format(DATE_FMT);
+        long count = orderRepository.countByOrderCodeStartingWith(datePrefix);
+        return String.format("%s%03d", datePrefix, count + 1);
+    }
+
+    /**
+     * Tạo VietQR URL cho chuyển khoản ngân hàng.
+     */
+    private String buildVietQrUrl(ShopBankAccount bank, int amount, String orderCode) {
+        String encodedName = URLEncoder.encode(bank.getAccountHolderName(), StandardCharsets.UTF_8);
+        String encodedInfo = URLEncoder.encode(orderCode, StandardCharsets.UTF_8);
+        return String.format(VIETQR_TEMPLATE,
+                bank.getBankId(), bank.getAccountNumber(),
+                amount, encodedInfo, encodedName);
+    }
+
     private int resolveUnitPrice(VariantStock stock, Map<Integer, Product> productByVariantId) {
         if (stock.getPriceOverride() != null) {
             return stock.getPriceOverride().intValue();
@@ -232,9 +258,6 @@ public class OrderServiceImpl implements OrderService {
         return 0;
     }
 
-    /**
-     * Build map: variantId → Product (for price resolution)
-     */
     private Map<Integer, Product> buildProductByVariantIdMap(Map<Integer, VariantStock> stockMap) {
         List<Integer> variantIds = stockMap.values().stream()
                 .map(VariantStock::getVariantId).distinct().collect(Collectors.toList());
@@ -248,16 +271,12 @@ public class OrderServiceImpl implements OrderService {
         Map<Integer, Product> productMap = productRepository.findAllById(productIds)
                 .stream().collect(Collectors.toMap(Product::getId, Function.identity()));
 
-        // Map: variantId → Product
         return variantMap.entrySet().stream()
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         e -> productMap.getOrDefault(e.getValue().getProductId(), new Product())));
     }
 
-    /**
-     * Khoi phuc ton kho khi huy don hang.
-     */
     private void restoreStock(Integer orderId) {
         List<OrderLine> lines = orderLineRepository.findByOrderId(orderId);
         for (OrderLine line : lines) {
@@ -269,17 +288,18 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * Tao OrderDetailDTO day du tu ShopOrder (batch-load moi thu).
+     * Tạo OrderDetailDTO đầy đủ, bao gồm QR URL nếu là chuyển khoản.
      */
     private OrderDetailDTO buildOrderDetail(ShopOrder order) {
         OrderDetailDTO dto = new OrderDetailDTO();
         dto.setId(order.getId());
+        dto.setOrderCode(order.getOrderCode());
         dto.setUserId(order.getUserId());
         dto.setOrderDate(order.getOrderDate());
-        dto.setPaymentMethodId(order.getPaymentMethodId());
+        dto.setPaymentNote(order.getPaymentNote());
         dto.setShippingAddressId(order.getShippingAddress());
 
-        // Trang thai
+        // Trạng thái
         if (order.getOrderStatus() != null) {
             orderStatusRepository.findById(order.getOrderStatus()).ifPresent(s -> {
                 dto.setStatusId(s.getId());
@@ -287,7 +307,31 @@ public class OrderServiceImpl implements OrderService {
             });
         }
 
-        // Phuong thuc van chuyen
+        // Loại thanh toán + QR
+        if (order.getPaymentTypeId() != null) {
+            paymentTypeRepository.findById(order.getPaymentTypeId()).ifPresent(pt -> {
+                dto.setPaymentTypeId(pt.getId());
+                dto.setPaymentTypeName(pt.getValue());
+
+                // Nếu là chuyển khoản → tạo QR URL
+                if (isTransferPayment(pt.getValue())) {
+                    shopBankAccountRepository.findByIsActiveTrue().ifPresent(bank -> {
+                        dto.setQrUrl(buildVietQrUrl(bank, order.getOrderTotal(), order.getOrderCode()));
+                        // Gửi kèm thông tin bank để FE hiển thị
+                        ShopBankAccountDTO bankDto = new ShopBankAccountDTO();
+                        bankDto.setId(bank.getId());
+                        bankDto.setBankId(bank.getBankId());
+                        bankDto.setBankName(bank.getBankName());
+                        bankDto.setAccountNumber(bank.getAccountNumber());
+                        bankDto.setAccountHolderName(bank.getAccountHolderName());
+                        bankDto.setLogoUrl(bank.getLogoUrl());
+                        dto.setBankInfo(bankDto);
+                    });
+                }
+            });
+        }
+
+        // Phương thức vận chuyển
         if (order.getShippingMethod() != null) {
             shippingMethodRepository.findById(order.getShippingMethod()).ifPresent(sm -> {
                 dto.setShippingMethodId(sm.getId());
@@ -296,7 +340,7 @@ public class OrderServiceImpl implements OrderService {
             });
         }
 
-        // Dia chi giao hang
+        // Địa chỉ giao hàng
         if (order.getShippingAddress() != null) {
             addressRepository.findById(order.getShippingAddress()).ifPresent(addr -> {
                 AddressDTO addrDto = new AddressDTO();
@@ -318,7 +362,6 @@ public class OrderServiceImpl implements OrderService {
         List<OrderLineDetailDTO> lineDetails = buildLineDetails(lines);
         dto.setItems(lineDetails);
 
-        // Tinh toan tong tien
         int subtotal = lineDetails.stream()
                 .mapToInt(l -> l.getSubtotal() != null ? l.getSubtotal() : 0).sum();
         dto.setSubtotal(subtotal);
@@ -328,8 +371,15 @@ public class OrderServiceImpl implements OrderService {
     }
 
     /**
-     * Enrich danh sach order lines voi thong tin san pham (batch-load).
+     * Kiểm tra loại thanh toán có phải chuyển khoản không.
      */
+    private boolean isTransferPayment(String paymentTypeValue) {
+        if (paymentTypeValue == null) return false;
+        String lower = paymentTypeValue.toLowerCase();
+        return lower.contains("chuyển khoản") || lower.contains("chuyen khoan")
+                || lower.contains("bank transfer");
+    }
+
     private List<OrderLineDetailDTO> buildLineDetails(List<OrderLine> lines) {
         if (lines.isEmpty()) return Collections.emptyList();
 
@@ -414,4 +464,3 @@ public class OrderServiceImpl implements OrderService {
         return dto;
     }
 }
-

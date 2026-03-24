@@ -9,6 +9,7 @@ import java.util.List;
 public class OrderDetailDTO {
 
     private Integer id;
+    private String orderCode;
     private Integer userId;
     private LocalDateTime orderDate;
 
@@ -16,8 +17,16 @@ public class OrderDetailDTO {
     private Integer statusId;
     private String statusName;
 
-    // Phuong thuc thanh toan
-    private Integer paymentMethodId;
+    // Thanh toan
+    private Integer paymentTypeId;
+    private String paymentTypeName;
+    private String paymentNote;
+
+    /** URL mã QR chuyển khoản (chỉ có khi paymentType = "Chuyển khoản ngân hàng") */
+    private String qrUrl;
+
+    /** Thông tin tài khoản ngân hàng shop (chỉ có khi chuyển khoản) */
+    private ShopBankAccountDTO bankInfo;
 
     // Phuong thuc van chuyen
     private Integer shippingMethodId;

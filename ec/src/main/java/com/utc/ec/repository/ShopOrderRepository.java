@@ -21,4 +21,7 @@ public interface ShopOrderRepository extends JpaRepository<ShopOrder, Integer> {
     Page<ShopOrder> findAllByOrderByOrderDateDesc(Pageable pageable);
 
     Page<ShopOrder> findByOrderStatusOrderByOrderDateDesc(Integer orderStatus, Pageable pageable);
+
+    /** Đếm đơn hàng theo prefix mã đơn (VD: "DH20260324") để sinh số thứ tự trong ngày */
+    long countByOrderCodeStartingWith(String prefix);
 }

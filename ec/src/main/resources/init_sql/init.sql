@@ -22,6 +22,7 @@ DROP TABLE IF EXISTS shopping_cart_item;
 DROP TABLE IF EXISTS shopping_cart;
 DROP TABLE IF EXISTS user_payment_method;
 DROP TABLE IF EXISTS payment_type;
+DROP TABLE IF EXISTS shop_bank_account;
 DROP TABLE IF EXISTS variant_stocks;
 DROP TABLE IF EXISTS product_variants;
 DROP TABLE IF EXISTS products;
@@ -236,6 +237,19 @@ CREATE TABLE payment_type
     CONSTRAINT pk_paymenttype PRIMARY KEY (id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Tai khoan ngan hang cua shop (ADMIN cau hinh, user xem de chuyen khoan)
+CREATE TABLE shop_bank_account
+(
+    id                  INT AUTO_INCREMENT,
+    bank_id             VARCHAR(20)  NOT NULL COMMENT 'Ma ngan hang VietQR: VCB, TCB, MB...',
+    bank_name           VARCHAR(200) NOT NULL,
+    account_number      VARCHAR(50)  NOT NULL,
+    account_holder_name VARCHAR(200) NOT NULL,
+    logo_url            VARCHAR(500) DEFAULT NULL,
+    is_active           BOOLEAN      NOT NULL DEFAULT TRUE,
+    CONSTRAINT pk_shopbank PRIMARY KEY (id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE user_payment_method
 (
     id              INT AUTO_INCREMENT,
@@ -293,13 +307,17 @@ CREATE TABLE shop_order
     id                INT AUTO_INCREMENT,
     user_id           INT,
     order_date        DATETIME,
-    payment_method_id INT,
+    order_code        VARCHAR(30)  DEFAULT NULL UNIQUE COMMENT 'Ma don hang: DH20260324001',
+    payment_type_id   INT          DEFAULT NULL COMMENT 'Loai thanh toan: COD, Chuyen khoan...',
+    payment_note      VARCHAR(500) DEFAULT NULL COMMENT 'Ghi chu thanh toan',
+    payment_method_id INT          DEFAULT NULL COMMENT 'Giu lai cho don hang cu',
     shipping_address  INT,
     shipping_method   INT,
     order_total       INT,
     order_status      INT,
     CONSTRAINT pk_shoporder PRIMARY KEY (id),
     CONSTRAINT fk_shoporder_user FOREIGN KEY (user_id) REFERENCES site_user (id),
+    CONSTRAINT fk_shoporder_paytype FOREIGN KEY (payment_type_id) REFERENCES payment_type (id),
     CONSTRAINT fk_shoporder_paymethod FOREIGN KEY (payment_method_id) REFERENCES user_payment_method (id),
     CONSTRAINT fk_shoporder_shipaddress FOREIGN KEY (shipping_address) REFERENCES address (id),
     CONSTRAINT fk_shoporder_shipmethod FOREIGN KEY (shipping_method) REFERENCES shipping_method (id),
