@@ -822,7 +822,7 @@ https://img.vietqr.io/image/{bankCode}-{accountNumber}-compact2.jpg?amount={amou
 **Auth Required:** ✅ Yes (ADMIN)
 
 #### 5.5.2. Lọc Đơn Hàng Theo Trạng Thái
-**Endpoint:** `GET /api/orders/admin/by-status/{statusId}?page=0&size=20`  
+**Endpoint:** `GET /api/orders/admin/by-status/{statusId}?page=0&size=20`
 **Auth Required:** ✅ Yes (ADMIN)
 
 **Status IDs:**
@@ -833,7 +833,7 @@ https://img.vietqr.io/image/{bankCode}-{accountNumber}-compact2.jpg?amount={amou
 - 5 = CANCELLED
 
 #### 5.5.3. Cập Nhật Trạng Thái Đơn Hàng
-**Endpoint:** `PATCH /api/orders/admin/{orderId}/status`  
+**Endpoint:** `PATCH /api/orders/admin/{orderId}/status`
 **Auth Required:** ✅ Yes (ADMIN)
 
 **Request Body:**
@@ -855,6 +855,372 @@ https://img.vietqr.io/image/{bankCode}-{accountNumber}-compact2.jpg?amount={amou
 ---
 
 ## 6. USER ADDRESS MANAGEMENT
+
+### 📍 6.1. Lấy Danh Sách Địa Chỉ
+
+**Endpoint:** `GET /api/addresses`  
+**Auth Required:** ✅ Yes (USER)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "unitNumber": "101",
+      "streetNumber": "25",
+      "addressLine1": "Đường Lê Văn Lương",
+      "addressLine2": null,
+      "city": "Hà Nội",
+      "region": "Thanh Xuân",
+      "postalCode": "100000",
+      "countryId": 1,
+      "isDefault": true
+    },
+    {
+      "id": 2,
+      "unitNumber": "202",
+      "streetNumber": "50",
+      "addressLine1": "Đường Nguyễn Trãi",
+      "addressLine2": null,
+      "city": "TP.HCM",
+      "region": "Quận 1",
+      "postalCode": "700000",
+      "countryId": 1,
+      "isDefault": false
+    }
+  ],
+  "timestamp": "2026-03-25T10:30:00Z"
+}
+```
+
+---
+
+### ➕ 6.2. Thêm Địa Chỉ Mới
+
+**Endpoint:** `POST /api/addresses`  
+**Auth Required:** ✅ Yes (USER)
+
+**Request Body:**
+```json
+{
+  "unitNumber": "101",
+  "streetNumber": "25",
+  "addressLine1": "Đường Lê Văn Lương",
+  "addressLine2": "Khu đô thị mới",
+  "city": "Hà Nội",
+  "region": "Thanh Xuân",
+  "postalCode": "100000",
+  "countryId": 1
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Them dia chi thanh cong",
+  "data": { 
+    "id": 3,
+    "unitNumber": "101",
+    "streetNumber": "25",
+    "addressLine1": "Đường Lê Văn Lương",
+    "addressLine2": "Khu đô thị mới",
+    "city": "Hà Nội",
+    "region": "Thanh Xuân",
+    "postalCode": "100000",
+    "countryId": 1,
+    "isDefault": true
+  },
+  "timestamp": "2026-03-25T10:30:00Z"
+}
+```
+
+**Note:** Địa chỉ đầu tiên tự động được đặt làm mặc định (`isDefault = true`)
+
+---
+
+### ✏️ 6.3. Cập Nhật Địa Chỉ
+
+**Endpoint:** `PUT /api/addresses/{addressId}`  
+**Auth Required:** ✅ Yes (USER)
+
+**Request Body:** Giống như POST
+
+---
+
+### 🗑️ 6.4. Xóa Địa Chỉ
+
+**Endpoint:** `DELETE /api/addresses/{addressId}`  
+**Auth Required:** ✅ Yes (USER)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Xoa dia chi thanh cong",
+  "data": null,
+  "timestamp": "2026-03-25T10:30:00Z"
+}
+```
+
+---
+
+### ⭐ 6.5. Đặt Địa Chỉ Mặc Định
+
+**Endpoint:** `PATCH /api/addresses/{addressId}/default`  
+**Auth Required:** ✅ Yes (USER)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Da dat dia chi mac dinh",
+  "data": { 
+    "id": 2,
+    "unitNumber": "202",
+    "streetNumber": "50",
+    "addressLine1": "Đường Nguyễn Trãi",
+    "addressLine2": null,
+    "city": "TP.HCM",
+    "region": "Quận 1",
+    "postalCode": "700000",
+    "countryId": 1,
+    "isDefault": true
+  },
+  "timestamp": "2026-03-25T10:30:00Z"
+}
+```
+
+**Note:** Chỉ có 1 địa chỉ mặc định. Địa chỉ cũ tự động bỏ mặc định (`isDefault = false`).
+
+---
+
+## 7. USER PAYMENT METHODS
+
+### 💳 7.1. Lấy Danh Sách Phương Thức Thanh Toán
+
+**Endpoint:** `GET /api/payment-methods`  
+**Auth Required:** ✅ Yes (USER)
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "userId": 10,
+      "paymentTypeId": 3,
+      "provider": "VNPAY",
+      "accountNumber": "0901234567",
+      "expiryDate": "12/25",
+      "isDefault": true
+    }
+  ],
+  "timestamp": "2026-03-25T10:30:00Z"
+}
+```
+
+---
+
+### ➕ 7.2. Thêm Phương Thức Thanh Toán
+
+**Endpoint:** `POST /api/payment-methods`  
+**Auth Required:** ✅ Yes (USER)
+
+**Request Body:**
+```json
+{
+  "paymentTypeId": 3,
+  "provider": "VNPAY",
+  "accountNumber": "0901234567",
+  "expiryDate": "12/25"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Them phuong thuc thanh toan thanh cong",
+  "data": {
+    "id": 1,
+    "userId": 10,
+    "paymentTypeId": 3,
+    "provider": "VNPAY",
+    "accountNumber": "0901234567",
+    "expiryDate": "12/25",
+    "isDefault": true
+  },
+  "timestamp": "2026-03-25T10:30:00Z"
+}
+```
+
+**Note:** Phương thức đầu tiên tự động là default
+
+---
+
+### ✏️ 7.3. Cập Nhật Phương Thức Thanh Toán
+
+**Endpoint:** `PUT /api/payment-methods/{id}`  
+**Auth Required:** ✅ Yes (USER)
+
+---
+
+### 🗑️ 7.4. Xóa Phương Thức Thanh Toán
+
+**Endpoint:** `DELETE /api/payment-methods/{id}`  
+**Auth Required:** ✅ Yes (USER)
+
+---
+
+### ⭐ 7.5. Đặt Phương Thức Mặc Định
+
+**Endpoint:** `PATCH /api/payment-methods/{id}/default`  
+**Auth Required:** ✅ Yes (USER)
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Da dat lam phuong thuc mac dinh",
+  "data": { /* payment method với isDefault = true */ },
+  "timestamp": "2026-03-25T10:30:00Z"
+}
+```
+
+---
+
+## 8. FILE UPLOAD API
+
+### 📤 8.1. Upload Một Ảnh
+
+**Endpoint:** `POST /api/files/image`  
+**Auth Required:** ✅ Yes  
+**Content-Type:** `multipart/form-data`
+
+**Request:**
+```bash
+POST /api/files/image
+Content-Type: multipart/form-data
+
+file: [chọn file ảnh]
+```
+
+**Supported formats:** JPEG, PNG, GIF, WEBP, SVG  
+**Max size:** 10MB
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Upload anh thanh cong",
+  "data": {
+    "url": "/uploads/images/1711344600000_product.jpg",
+    "fileName": "1711344600000_product.jpg",
+    "fileSize": 245678,
+    "contentType": "image/jpeg"
+  },
+  "timestamp": "2026-03-25T10:30:00Z"
+}
+```
+
+**Frontend Example (JavaScript):**
+```javascript
+async function uploadImage(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  const response = await axios.post('/api/files/image', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  return response.data.url; // "/uploads/images/..."
+}
+
+// Sử dụng
+const imageUrl = await uploadImage(selectedFile);
+// Lưu vào product.imageUrl hoặc variant.colorImageUrl
+```
+
+---
+
+### 📤 8.2. Upload Nhiều Ảnh
+
+**Endpoint:** `POST /api/files/images`  
+**Auth Required:** ✅ Yes  
+**Content-Type:** `multipart/form-data`
+
+**Request:**
+```bash
+POST /api/files/images
+Content-Type: multipart/form-data
+
+files: [file1, file2, file3, ...]
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Upload 3 anh thanh cong",
+  "data": [
+    {
+      "url": "/uploads/images/1711344600000_img1.jpg",
+      "fileName": "1711344600000_img1.jpg",
+      "fileSize": 123456,
+      "contentType": "image/jpeg"
+    },
+    {
+      "url": "/uploads/images/1711344600001_img2.jpg",
+      "fileName": "1711344600001_img2.jpg",
+      "fileSize": 234567,
+      "contentType": "image/png"
+    }
+  ],
+  "timestamp": "2026-03-25T10:30:00Z"
+}
+```
+
+**Frontend Example:**
+```javascript
+async function uploadMultipleImages(files) {
+  const formData = new FormData();
+  files.forEach(file => {
+    formData.append('files', file);
+  });
+  
+  const response = await axios.post('/api/files/images', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+      'Authorization': `Bearer ${token}`
+    }
+  });
+  
+  // Lấy array các URL
+  const urls = response.data.map(item => item.url);
+  
+  // Lưu vào variant.images dạng JSON string
+  const imagesJson = JSON.stringify(urls);
+  // VD: "[\"\/uploads\/images\/img1.jpg\",\"\/uploads\/images\/img2.jpg\"]"
+  
+  return urls;
+}
+```
+
+**Lưu ý:**
+- File được lưu tại `C:\CODE\uploads\images` (local) hoặc `/app/uploads/images` (Docker)
+- URL trả về có thể dùng trực tiếp: `<img src="http://localhost:8080${url}" />`
+- Tên file được prefix timestamp để tránh trùng lặp
+
+---
+
+## 9. SUPPORT APIs
 
 ### 📍 6.1. Lấy Danh Sách Địa Chỉ
 
@@ -952,12 +1318,24 @@ https://img.vietqr.io/image/{bankCode}-{accountNumber}-compact2.jpg?amount={amou
 ```json
 {
   "success": true,
-  "message": "Đã đặt địa chỉ mặc định",
-  "data": { /* address detail với isDefault = true */ }
+  "message": "Da dat dia chi mac dinh",
+  "data": { 
+    "id": 2,
+    "unitNumber": "202",
+    "streetNumber": "50",
+    "addressLine1": "Đường Nguyễn Trãi",
+    "addressLine2": null,
+    "city": "TP.HCM",
+    "region": "Quận 1",
+    "postalCode": "700000",
+    "countryId": 1,
+    "isDefault": true
+  },
+  "timestamp": "2026-03-25T10:30:00Z"
 }
 ```
 
-**Note:** Chỉ có 1 địa chỉ mặc định. Địa chỉ cũ tự động bỏ mặc định.
+**Note:** Chỉ có 1 địa chỉ mặc định. Địa chỉ cũ tự động bỏ mặc định (`isDefault = false`).
 
 ---
 
@@ -975,15 +1353,18 @@ https://img.vietqr.io/image/{bankCode}-{accountNumber}-compact2.jpg?amount={amou
   "data": [
     {
       "id": 1,
-      "name": "Chuyển khoản ngân hàng",
-      "description": "Thanh toán qua QR code VietQR"
+      "value": "Chuyển khoản ngân hàng"
     },
     {
       "id": 2,
-      "name": "COD (Tiền mặt)",
-      "description": "Thanh toán khi nhận hàng"
+      "value": "COD (Tiền mặt khi nhận hàng)"
+    },
+    {
+      "id": 3,
+      "value": "VNPAY"
     }
-  ]
+  ],
+  "timestamp": "2026-03-25T10:30:00Z"
 }
 ```
 
@@ -1328,7 +1709,7 @@ async function cancelOrder(orderId) {
 
 ---
 
-### 🔍 9.6. Search & Filter
+### 🔍 11.6. Search & Filter
 
 ```javascript
 // Build search URL
@@ -1375,8 +1756,9 @@ const products = await api.get(buildSearchUrl(searchFilters));
 ## 📞 SUPPORT & RESOURCES
 
 ### 🌐 API Documentation
-- **Swagger UI:** http://160.30.113.40:8080/swagger-ui.html
-- **API Docs JSON:** http://160.30.113.40:8080/v3/api-docs
+- **Swagger UI Local:** http://localhost:8080/swagger-ui.html
+- **Swagger UI Production:** http://160.30.113.40:8080/swagger-ui.html
+- **API Docs JSON:** http://localhost:8080/v3/api-docs
 
 ### 🏥 Health Check
 - **Endpoint:** `GET /actuator/health`
@@ -1392,12 +1774,18 @@ const products = await api.get(buildSearchUrl(searchFilters));
 }
 ```
 
-### 📝 Notes
-1. Tất cả datetime đều dùng format ISO 8601: `2026-03-24T14:30:00`
-2. Currency (tiền tệ) đều là VNĐ (Integer)
-3. File upload (ảnh sản phẩm) có endpoint riêng: `POST /api/files/upload` (chưa document trong file này)
-4. JWT token có thời hạn 24 giờ (86400000ms)
+### 📝 Important Notes
+1. Tất cả datetime đều dùng format ISO 8601: `2026-03-25T14:30:00`
+2. Currency (tiền tệ) đều là VNĐ (Integer, không có phần thập phân)
+3. File upload: `POST /api/files/image` (1 ảnh) hoặc `POST /api/files/images` (nhiều ảnh)
+   - Response có `fileUrl` để hiển thị ảnh
+   - Xem chi tiết tại Section 8 - File Upload API
+4. JWT token có thời hạn **24 giờ** (86400000ms)
 5. Database timezone: UTC
+6. `images` trong ProductVariant là JSON string, cần parse: `JSON.parse(variant.images)`
+7. Giá hiển thị = `priceOverride != null ? priceOverride : basePrice`
+8. Mã đơn hàng format: `DH + yyyyMMdd + số thứ tự` (VD: DH20260325001)
+9. `isDefault` trong UserPaymentMethod là Integer (1 = true, 0 = false)
 
 ### 🐛 Common Issues
 

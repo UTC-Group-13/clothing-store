@@ -254,12 +254,131 @@ site_user ──< user_review ──> order_line
 
 ## 10. Đề Xuất Phát Triển Tiếp Theo
 
-Theo thứ tự ưu tiên:
+### 🎯 Ưu Tiên Cao (Hoàn thiện core features)
 
-1. **Shopping Cart API** – Thêm/sửa/xóa giỏ hàng
-2. **Order API** – Tạo đơn hàng, cập nhật trạng thái, lịch sử mua
-3. **Address API** – Quản lý địa chỉ giao hàng của user
-4. **Review API** – Đánh giá sản phẩm
-5. **Promotion Engine** – Tính toán giá sau KM theo danh mục
-6. **Payment API** – Lưu phương thức thanh toán
+1. **Review System** (0% - Entity/Repo có rồi)
+   - Tạo `ReviewService` + `ReviewServiceImpl`
+   - Tạo `ReviewController` với endpoints:
+     - `POST /api/reviews` - Tạo đánh giá (validate đã mua sản phẩm)
+     - `GET /api/reviews/product/{productId}` - Xem đánh giá theo sản phẩm
+     - `GET /api/reviews/my` - Đánh giá của tôi
+     - `DELETE /api/reviews/{id}` - Xóa đánh giá của mình
+   - Business logic: Check user đã mua sản phẩm (qua order_line)
+
+2. **Promotion System** (0% - Entity/Repo có rồi)
+   - Tạo `PromotionServiceImpl`
+   - Tạo `PromotionController` với endpoints:
+     - `POST/PUT/DELETE/GET /api/promotions` - CRUD khuyến mãi
+     - `GET /api/promotions/active` - Lấy KM đang chạy
+     - `POST /api/promotions/{id}/categories` - Gắn KM vào danh mục
+   - Business logic: Tính giá sau giảm trong `ProductService.getById()`
+
+### 🚀 Ưu Tiên Trung Bình (Enhanced features)
+
+3. **Payment Gateway Integration**
+   - VNPAY webhook handler (`POST /api/payment/vnpay/callback`)
+   - MoMo webhook handler
+   - Auto update order status khi thanh toán thành công
+
+4. **Email Notifications**
+   - Gửi email xác nhận đơn hàng
+   - Gửi email khi trạng thái đổi
+   - Email reset password
+
+5. **Inventory Management**
+   - Alert khi sản phẩm sắp hết hàng (`stockQty < threshold`)
+   - Import/Export tồn kho Excel
+   - Lịch sử thay đổi tồn kho (audit log)
+
+### 💡 Ưu Tiên Thấp (Nice to have)
+
+6. **Admin Analytics Dashboard**
+   - Thống kê doanh thu theo ngày/tháng
+   - Top sản phẩm bán chạy
+   - Tỷ lệ chuyển đổi (conversion rate)
+
+7. **Advanced Search**
+   - Full-text search (Elasticsearch integration)
+   - Gợi ý tìm kiếm (autocomplete)
+   - Lọc theo nhiều thuộc tính (brand, material...)
+
+8. **Wishlist/Favorites**
+   - Thêm bảng `user_wishlist`
+   - API lưu sản phẩm yêu thích
+
+---
+
+## 11. Ràng Buộc FK (Foreign Key) Quan Trọng
+
+### ⚠️ Phải nhớ khi DELETE
+
+```
+❌ KHÔNG XÓA ĐƯỢC:
+
+categories      → nếu có category con HOẶC có product
+colors          → nếu có product_variant sử dụng
+sizes           → nếu có variant_stock sử dụng
+products        → nếu có product_variant
+product_variant → nếu có variant_stock
+payment_type    → nếu có shop_order sử dụng
+shipping_method → nếu có shop_order sử dụng
+
+✅ XÓA ĐƯỢC:
+
+variant_stock   → luôn được (là bảng cuối cùng)
+user_review     → luôn được
+shopping_cart_item → luôn được
+order_line      → không nên xóa (dữ liệu lịch sử)
+```
+
+### 🔒 Implementation trong Service
+
+Tất cả Service DELETE đều check FK trước:
+```java
+@Override
+public void delete(Integer id) {
+    if (!repository.existsById(id)) {
+        throw new ResourceNotFoundException("entity.notFound", id);
+    }
+    
+    // Check FK constraints
+    if (childRepository.existsByParentId(id)) {
+        throw new BusinessException("entity.hasChildren");
+    }
+    
+    repository.deleteById(id);
+}
+```
+
+Xem: `CategoryServiceImpl.delete()`, `ColorServiceImpl.delete()`, `ProductServiceImpl.delete()`
+
+---
+
+## 12. Performance Considerations
+
+### 🚀 Đã Optimize
+
+1. **Index trên các cột tìm kiếm**
+   - `products.slug` (UNIQUE)
+   - `categories.slug` (UNIQUE)
+   - `variant_stocks.sku` (UNIQUE)
+   - Foreign keys tự động có index
+
+2. **Lazy loading cho relationships**
+   - Không dùng `@OneToMany` eager fetch
+   - Fetch khi cần qua Service layer
+
+3. **DTO Pattern**
+   - Không trả về Entity trực tiếp → tránh leak dữ liệu
+   - MapStruct mapping tối ưu hơn manual mapping
+
+4. **Pagination**
+   - Tất cả list endpoints đều hỗ trợ `Pageable`
+   - Tránh load toàn bộ data
+
+### ⚠️ Cần Cải Thiện
+
+1. **Caching** - Redis cho product catalog (ít thay đổi, đọc nhiều)
+2. **N+1 Query** - Dùng `@EntityGraph` hoặc JOIN FETCH cho nested data
+3. **Full-text Search** - MySQL full-text index hoặc Elasticsearch
 

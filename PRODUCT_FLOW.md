@@ -1,7 +1,7 @@
 # LUỒNG TẠO VÀ XEM, LỌC SẢN PHẨM
 
 > **Clothing Store API** — Tài liệu luồng hoạt động Product Catalog  
-> Cập nhật: 2026-03-23
+> Cập nhật: 2026-03-25
 
 ---
 
@@ -562,8 +562,11 @@ GET /api/variant-stocks/search?keyword=P1-V&page=0&size=20
 │                                                                 │
 │  [3] Khi user thay đổi bộ lọc/search/sort/page:                │
 │      GET /api/products/search                                   │
-│         ?keyword={input}                                        │
-│         &categoryId={selected}                                  │
+│         ?name={input}                                           │
+│         &categoryIds={selected}                                 │
+│         &colorIds={selected}                                    │
+│         &minPrice={min}                                         │
+│         &maxPrice={max}                                         │
 │         &isActive=true                                          │
 │         &page={currentPage}                                     │
 │         &size=20                                                │

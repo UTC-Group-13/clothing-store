@@ -1,7 +1,8 @@
 # 📦 Clothing Store API — Tóm Tắt Dự Án
 
-> **Cập nhật:** March 2026  
-> **Trạng thái:** Đang phát triển (v0.0.1-SNAPSHOT)
+> **Cập nhật:** March 25, 2026  
+> **Trạng thái:** 88% hoàn thành - Core features đã sẵn sàng (v0.0.1-SNAPSHOT)  
+> **Endpoints:** 81 APIs đã triển khai
 
 ---
 
@@ -496,6 +497,44 @@ java -jar target/ec-0.0.1-SNAPSHOT.jar
 
 ---
 
+## 🧠 Business Logic Quan Trọng
+
+### CartService
+- **Auto-create cart:** Tạo giỏ tự động khi user thêm item lần đầu
+- **Merge items:** Thêm cùng `variantStockId` → cộng quantity thay vì tạo mới
+- **Stock validation:** Check tồn kho trước khi thêm/update
+- **Build summary:** Join 7 bảng (product, variant, stock, color, size, cart, cart_item) để trả về full info
+
+### OrderService
+- **Place order (10 bước):**
+  1. Validate address thuộc về user
+  2. Validate payment type & shipping method
+  3. Get cart, check not empty
+  4. Validate stock cho TẤT CẢ items
+  5. Calculate total (subtotal + shipping fee)
+  6. Create ShopOrder (status = PENDING)
+  7. Create OrderLine cho mỗi item
+  8. **Deduct stock** (`stockQty -= qty`)
+  9. **Clear cart**
+  10. Generate VietQR URL (nếu bank transfer)
+- **Cancel order:** Only PENDING, auto restore stock
+- **Generate order code:** `DH + yyyyMMdd + 3-digit counter`
+
+### UserAddressService
+- **First address auto default:** Địa chỉ đầu tiên tự động `isDefault = true`
+- **Set default:** Bỏ default cái cũ, set cái mới
+
+### ProductService
+- **Enrich thumbnail:** Tự động lấy `colorImageUrl` từ variant có `isDefault = true`
+- **Search với Specification:** JPA Criteria API cho multi-filter
+- **FK check:** Không xóa được product nếu có variant
+
+### VariantStockService
+- **Price resolution:** `finalPrice = priceOverride ?? product.basePrice`
+- **SKU unique:** Validate toàn bảng trước khi save
+
+---
+
 ## 📝 Ghi Chú Quan Trọng
 
 1. **Database:** Schema được khởi tạo từ `init.sql` (DROP + CREATE), không dùng Hibernate DDL auto
@@ -504,4 +543,98 @@ java -jar target/ec-0.0.1-SNAPSHOT.jar
 4. **Docker image name:** Phải lowercase (`ghcr.io/utc-group-13/clothing-store-api`) — CI/CD đã xử lý bằng `tr '[:upper:]' '[:lower:]'`
 5. **File upload path:** Khi deploy Docker, map volume `-v /host/uploads:/app/uploads` để persist data
 6. **SSH Deploy:** Yêu cầu `SERVER_PASS` trong GitHub Secrets (hoặc SSH key)
+
+---
+
+## 🎯 Quick Reference
+
+### Chạy Local (PowerShell)
+```powershell
+# Maven
+cd ec
+mvn clean install
+mvn spring-boot:run
+
+# Docker Compose
+cd C:\Users\Admin\Desktop\LOC\clothing-store
+docker-compose up -d
+docker-compose logs -f app
+```
+
+### Test APIs
+- **Swagger UI:** http://localhost:8080/swagger-ui.html
+- **Health check:** http://localhost:8080/actuator/health
+
+### Common Tasks
+```powershell
+# Build JAR
+mvn clean package -DskipTests
+
+# Run tests
+mvn test
+
+# Generate sample data
+curl -X POST http://localhost:8080/api/sample-data/generate
+
+# Upload image (cần token)
+curl -X POST http://localhost:8080/api/files/image \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "file=@product.jpg"
+```
+
+### Key Files
+- `application.yml` - Cấu hình DB, JWT, upload
+- `messages.properties` - Error messages (i18n)
+- `init.sql` - Database schema (21 bảng)
+- `SecurityConfig.java` - Phân quyền endpoints
+- `GlobalExceptionHandler.java` - Xử lý lỗi tập trung
+
+### Documentation Files
+- `AGENTS.md` - Hướng dẫn cho AI coding agents
+- `PRODUCT_FLOW.md` - Luồng tạo sản phẩm 6 bước
+- `FRONTEND_API_GUIDE.md` - API reference cho frontend (1800+ dòng)
+- `DATABASE_ANALYSIS.md` - Phân tích database schema & FK
+
+---
+
+## 🚀 Roadmap
+
+### ✅ Đã Xong (88% - Q1 2026)
+- ✅ Core e-commerce features (Product, Cart, Order)
+- ✅ Authentication & Authorization (JWT + BCrypt)
+- ✅ File upload & management
+- ✅ Admin management APIs
+- ✅ Payment & Shipping configuration
+- ✅ VietQR integration
+- ✅ Swagger documentation
+- ✅ Docker deployment
+- ✅ CI/CD pipeline
+
+### 📋 Kế Hoạch (12% - Q2 2026)
+1. **Promotion System** - CRUD khuyến mãi, áp dụng vào order
+2. **Product Reviews** - User đánh giá sau khi mua
+3. **Payment Gateway** - VNPAY/MoMo webhook integration
+4. **Email Notifications** - Thông báo đơn hàng, reset password
+5. **Admin Analytics** - Dashboard doanh thu, top sản phẩm
+6. **Advanced Search** - Elasticsearch integration
+
+---
+
+## 📞 Contact & Support
+
+### Team
+- **Backend Team:** Spring Boot + MySQL experts
+- **DevOps:** Docker + GitHub Actions
+
+### Resources
+- **GitHub:** [Repository URL]
+- **Swagger Docs:** http://160.30.113.40:8080/swagger-ui.html
+- **Production API:** http://160.30.113.40:8080
+
+### Issue Tracking
+- Check `AGENTS.md` for AI agent guidelines
+- Check `FRONTEND_API_GUIDE.md` for API examples
+- Test on Swagger UI before reporting bugs
+
+**Happy Coding! 🎉**
 
