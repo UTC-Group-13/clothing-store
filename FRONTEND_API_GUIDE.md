@@ -19,6 +19,7 @@
 7. [Support APIs](#7-support-apis)
 8. [Error Handling](#8-error-handling)
 9. [Best Practices](#9-best-practices)
+10. [Product Reviews APIs](#10-product-reviews-apis) ⭐ NEW
 
 ---
 
@@ -41,9 +42,13 @@
 | `GET /api/sizes/**` | Public |
 | `GET /api/payment-types/**` | Public |
 | `GET /api/shipping-methods/**` | Public |
+| `GET /api/reviews/product/**` | Public |
 | `/api/cart/**` | Authenticated USER |
 | `/api/orders/**` | Authenticated USER |
 | `/api/addresses/**` | Authenticated USER |
+| `POST /api/reviews` | Authenticated USER |
+| `GET /api/reviews/my` | Authenticated USER |
+| `DELETE /api/reviews/{id}` | Authenticated USER |
 | `POST/PUT/DELETE /api/products/**` | Authenticated + ADMIN |
 | `GET /api/orders/admin/**` | Authenticated + ADMIN |
 
@@ -1749,6 +1754,428 @@ const searchFilters = {
 };
 
 const products = await api.get(buildSearchUrl(searchFilters));
+```
+
+---
+
+## 10. PRODUCT REVIEWS APIs ⭐ NEW
+
+> **Chống fake review:** User CHỈ được đánh giá sản phẩm đã mua thật (FK tới `order_line`), đơn hàng phải ở trạng thái **DELIVERED**.
+
+### Tổng Quan Endpoints
+
+| Method | Endpoint | Auth | Mô tả |
+|--------|----------|------|-------|
+| `GET` | `/api/reviews/product/{productId}` | ❌ No | Xem reviews theo sản phẩm |
+| `GET` | `/api/reviews/product/{productId}/summary` | ❌ No | Điểm TB + tổng số reviews |
+| `POST` | `/api/reviews` | ✅ USER | Tạo review |
+| `GET` | `/api/reviews/my` | ✅ USER | Reviews của tôi |
+| `DELETE` | `/api/reviews/{id}` | ✅ USER | Xóa review của mình |
+
+---
+
+### 🌟 10.1. Xem Reviews Theo Sản Phẩm
+
+**Endpoint:** `GET /api/reviews/product/{productId}`  
+**Auth Required:** ❌ No
+
+**Example:** `GET /api/reviews/product/3`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 1,
+      "userId": 10,
+      "username": "ngoc123",
+      "orderedProductId": 10,
+      "ratingValue": 5,
+      "comment": "Áo đẹp lắm, chất lượng tốt!",
+      "createdAt": "2026-03-25T10:30:00",
+      "productId": 3,
+      "productName": "Áo thun Nike",
+      "productSlug": "ao-thun-nike",
+      "colorName": "Đỏ",
+      "colorHex": "#FF0000",
+      "colorImageUrl": "/uploads/images/nike-red.jpg",
+      "sizeLabel": "M",
+      "sizeType": "CLOTHING",
+      "sku": "NIKE-RED-M"
+    },
+    {
+      "id": 2,
+      "userId": 11,
+      "username": "minh456",
+      "orderedProductId": 15,
+      "ratingValue": 4,
+      "comment": "Giao hàng nhanh, sản phẩm OK",
+      "createdAt": "2026-03-24T14:20:00",
+      "productId": 3,
+      "productName": "Áo thun Nike",
+      "productSlug": "ao-thun-nike",
+      "colorName": "Xanh",
+      "colorHex": "#0000FF",
+      "colorImageUrl": "/uploads/images/nike-blue.jpg",
+      "sizeLabel": "L",
+      "sizeType": "CLOTHING",
+      "sku": "NIKE-BLU-L"
+    }
+  ],
+  "timestamp": "2026-03-25T10:30:00Z"
+}
+```
+
+**Note:**
+- Sắp xếp **mới nhất trước** (ORDER BY `createdAt` DESC)
+- Response enriched: mỗi review gồm thông tin sản phẩm (tên, màu, size, SKU, ảnh)
+- Trả về `[]` nếu chưa có review nào
+- **404** nếu `productId` không tồn tại
+
+**Response Fields:**
+
+| Field | Type | Mô tả |
+|-------|------|-------|
+| `id` | Integer | ID review |
+| `userId` | Integer | ID người đánh giá |
+| `username` | String | Tên hiển thị của người đánh giá |
+| `orderedProductId` | Integer | ID order_line (dòng sản phẩm đã mua) |
+| `ratingValue` | Integer | Điểm đánh giá (1–5 sao) |
+| `comment` | String | Nội dung đánh giá (nullable) |
+| `createdAt` | DateTime | Thời gian tạo review |
+| `productId` | Integer | ID sản phẩm |
+| `productName` | String | Tên sản phẩm |
+| `productSlug` | String | Slug sản phẩm (SEO) |
+| `colorName` | String | Tên màu đã mua |
+| `colorHex` | String | Mã hex màu |
+| `colorImageUrl` | String | Ảnh màu sắc (nullable) |
+| `sizeLabel` | String | Nhãn size (S, M, L, 39, 40...) |
+| `sizeType` | String | Loại size (CLOTHING / NUMERIC / SHOES) |
+| `sku` | String | Mã SKU của variant stock |
+
+---
+
+### 📊 10.2. Thống Kê Đánh Giá Sản Phẩm
+
+**Endpoint:** `GET /api/reviews/product/{productId}/summary`  
+**Auth Required:** ❌ No
+
+**Example:** `GET /api/reviews/product/3/summary`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": {
+    "productId": 3,
+    "avgRating": 4.5,
+    "totalReviews": 12
+  },
+  "timestamp": "2026-03-25T10:30:00Z"
+}
+```
+
+**Note:**
+- `avgRating` làm tròn 1 chữ số thập phân (4.5, 3.8...)
+- Nếu chưa có review: `avgRating = 0.0`, `totalReviews = 0`
+- **404** nếu `productId` không tồn tại
+
+**⭐ Tip FE:** Gọi API này khi render trang chi tiết sản phẩm để hiển thị sao + số lượng reviews ngay phía trên phần reviews.
+
+---
+
+### ✍️ 10.3. Tạo Đánh Giá
+
+**Endpoint:** `POST /api/reviews`  
+**Auth Required:** ✅ Yes (USER)
+
+**Request Body:**
+```json
+{
+  "orderedProductId": 10,
+  "ratingValue": 5,
+  "comment": "Sản phẩm rất đẹp, chất lượng tốt!"
+}
+```
+
+**Request Fields:**
+
+| Field | Type | Required | Validation |
+|-------|------|----------|-----------|
+| `orderedProductId` | Integer | ✅ | FK → `order_line.id`, phải tồn tại |
+| `ratingValue` | Integer | ✅ | Min 1, Max 5 |
+| `comment` | String | ❌ | Max 2000 ký tự |
+
+**Response (201 Created):**
+```json
+{
+  "success": true,
+  "message": "Tao danh gia thanh cong.",
+  "data": {
+    "id": 5,
+    "userId": 10,
+    "username": "ngoc123",
+    "orderedProductId": 10,
+    "ratingValue": 5,
+    "comment": "Sản phẩm rất đẹp, chất lượng tốt!",
+    "createdAt": "2026-03-25T15:30:00",
+    "productId": 3,
+    "productName": "Áo thun Nike",
+    "productSlug": "ao-thun-nike",
+    "colorName": "Đỏ",
+    "colorHex": "#FF0000",
+    "colorImageUrl": "/uploads/images/nike-red.jpg",
+    "sizeLabel": "M",
+    "sizeType": "CLOTHING",
+    "sku": "NIKE-RED-M"
+  },
+  "timestamp": "2026-03-25T15:30:00Z"
+}
+```
+
+**Validation & Errors:**
+
+| HTTP Status | Message | Khi nào |
+|-------------|---------|---------|
+| 201 | `Tao danh gia thanh cong.` | Tạo thành công |
+| 400 | `Don hang nay khong thuoc ve ban.` | order_line thuộc user khác |
+| 400 | `Don hang chua giao xong, khong the danh gia.` | Đơn hàng chưa DELIVERED |
+| 400 | `Ban da danh gia san pham nay roi.` | Đã review order_line này rồi |
+| 400 | Validation error | ratingValue ngoài 1–5, comment > 2000 |
+| 404 | `Khong tim thay dong san pham da mua voi ID: {0}` | order_line không tồn tại |
+
+**⚠️ Quan trọng cho FE:**
+- `orderedProductId` là **ID của `order_line`** (dòng sản phẩm trong đơn hàng), KHÔNG phải `productId`
+- Lấy `orderedProductId` từ response chi tiết đơn hàng (`GET /api/orders/{id}` → `items[].id`)
+- Chỉ hiện nút "Đánh giá" khi đơn hàng có `statusName = "DELIVERED"`
+
+---
+
+### 📝 10.4. Xem Reviews Của Tôi
+
+**Endpoint:** `GET /api/reviews/my`  
+**Auth Required:** ✅ Yes (USER)
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": null,
+  "data": [
+    {
+      "id": 5,
+      "userId": 10,
+      "username": "ngoc123",
+      "orderedProductId": 10,
+      "ratingValue": 5,
+      "comment": "Sản phẩm rất đẹp!",
+      "createdAt": "2026-03-25T15:30:00",
+      "productId": 3,
+      "productName": "Áo thun Nike",
+      "productSlug": "ao-thun-nike",
+      "colorName": "Đỏ",
+      "colorHex": "#FF0000",
+      "colorImageUrl": "/uploads/images/nike-red.jpg",
+      "sizeLabel": "M",
+      "sizeType": "CLOTHING",
+      "sku": "NIKE-RED-M"
+    }
+  ],
+  "timestamp": "2026-03-25T15:30:00Z"
+}
+```
+
+**Note:** Sắp xếp mới nhất trước. Trả về `[]` nếu chưa viết review nào.
+
+---
+
+### 🗑️ 10.5. Xóa Review Của Mình
+
+**Endpoint:** `DELETE /api/reviews/{reviewId}`  
+**Auth Required:** ✅ Yes (USER)
+
+**Example:** `DELETE /api/reviews/5`
+
+**Response (200 OK):**
+```json
+{
+  "success": true,
+  "message": "Xoa danh gia thanh cong.",
+  "data": null,
+  "timestamp": "2026-03-25T15:35:00Z"
+}
+```
+
+**Errors:**
+
+| HTTP Status | Message | Khi nào |
+|-------------|---------|---------|
+| 404 | `Khong tim thay danh gia voi ID: {0}` | Review không tồn tại |
+| 400 | `Danh gia nay khong thuoc ve ban.` | Cố xóa review của người khác |
+
+---
+
+### 💻 10.6. Frontend Implementation — Reviews
+
+#### Trang Chi Tiết Sản Phẩm (hiển thị reviews)
+
+```javascript
+// Load reviews + summary cho trang chi tiết sản phẩm
+async function loadProductReviews(productId) {
+  // Gọi song song 2 API để tối ưu
+  const [reviewsRes, summaryRes] = await Promise.all([
+    api.get(`/reviews/product/${productId}`),
+    api.get(`/reviews/product/${productId}/summary`)
+  ]);
+
+  return {
+    reviews: reviewsRes.data,    // List<ReviewResponseDTO>
+    summary: summaryRes.data     // { productId, avgRating, totalReviews }
+  };
+}
+
+// Render rating stars
+function renderStars(rating) {
+  const fullStars = Math.floor(rating);
+  const hasHalf = rating % 1 >= 0.5;
+  let html = '';
+  for (let i = 0; i < fullStars; i++) html += '★';
+  if (hasHalf) html += '☆';
+  for (let i = fullStars + (hasHalf ? 1 : 0); i < 5; i++) html += '☆';
+  return html;
+}
+
+// Hiển thị summary: ★★★★☆ 4.5/5 (12 đánh giá)
+function renderReviewSummary(summary) {
+  return `${renderStars(summary.avgRating)} ${summary.avgRating}/5 (${summary.totalReviews} đánh giá)`;
+}
+
+// Hiển thị từng review
+function renderReview(review) {
+  return `
+    <div class="review-item">
+      <div class="review-header">
+        <strong>${review.username}</strong>
+        <span>${renderStars(review.ratingValue)}</span>
+        <span class="review-date">${new Date(review.createdAt).toLocaleDateString('vi-VN')}</span>
+      </div>
+      <div class="review-variant">
+        Phân loại: ${review.colorName} / ${review.sizeLabel}
+      </div>
+      <p class="review-comment">${review.comment || ''}</p>
+    </div>
+  `;
+}
+```
+
+#### Trang Chi Tiết Đơn Hàng (nút viết đánh giá)
+
+```javascript
+// Kiểm tra và hiển thị nút "Đánh giá" cho từng item trong đơn hàng DELIVERED
+async function renderOrderItemsWithReviewButton(order) {
+  // Chỉ show nút review khi đơn hàng DELIVERED
+  if (order.statusName !== 'DELIVERED') return;
+
+  // Load reviews của user để check đã review chưa
+  const myReviews = await api.get('/reviews/my');
+  const reviewedOrderLineIds = new Set(
+    myReviews.data.map(r => r.orderedProductId)
+  );
+
+  order.items.forEach(item => {
+    const alreadyReviewed = reviewedOrderLineIds.has(item.id);
+    // item.id chính là orderedProductId (order_line.id)
+
+    if (alreadyReviewed) {
+      // Đã đánh giá → hiện badge "Đã đánh giá ★"
+      showBadge(item.id, 'Đã đánh giá ★');
+    } else {
+      // Chưa đánh giá → hiện nút "Viết đánh giá"
+      showReviewButton(item.id);
+    }
+  });
+}
+
+// Submit review
+async function submitReview(orderedProductId, ratingValue, comment) {
+  try {
+    const response = await api.post('/reviews', {
+      orderedProductId,  // ← order_line.id, KHÔNG phải productId
+      ratingValue,       // ← 1-5
+      comment            // ← optional, max 2000 chars
+    });
+
+    alert('Đánh giá thành công!');
+    return response.data;
+
+  } catch (error) {
+    const msg = error.response?.data?.message;
+
+    if (msg?.includes('khong thuoc ve ban')) {
+      alert('Đơn hàng không thuộc về bạn.');
+    } else if (msg?.includes('chua giao xong')) {
+      alert('Đơn hàng chưa giao xong, không thể đánh giá.');
+    } else if (msg?.includes('da danh gia')) {
+      alert('Bạn đã đánh giá sản phẩm này rồi.');
+    } else {
+      alert(msg || 'Có lỗi xảy ra');
+    }
+  }
+}
+
+// Xóa review
+async function deleteReview(reviewId) {
+  if (!confirm('Bạn có chắc muốn xóa đánh giá này?')) return;
+
+  try {
+    await api.delete(`/reviews/${reviewId}`);
+    alert('Đã xóa đánh giá');
+    location.reload();
+  } catch (error) {
+    alert(error.response?.data?.message || 'Không thể xóa đánh giá');
+  }
+}
+```
+
+#### Trang "Đánh Giá Của Tôi"
+
+```javascript
+// Load tất cả reviews của user hiện tại
+async function loadMyReviews() {
+  const response = await api.get('/reviews/my');
+
+  // Hiển thị:
+  // - Sản phẩm (productName + colorName + sizeLabel)
+  // - Rating (1-5 sao)
+  // - Comment
+  // - Ngày đánh giá
+  // - Nút xóa
+
+  return response.data;
+}
+```
+
+#### Mapping orderedProductId từ Order Detail
+
+```javascript
+// ⚠️ QUAN TRỌNG: orderedProductId = order_line.id (KHÔNG phải product.id)
+//
+// Flow lấy orderedProductId:
+//   GET /api/orders/{orderId}
+//   → response.data.items[]
+//   → mỗi item có .id  ← ĐÂY chính là orderedProductId
+//
+// Ví dụ:
+//   order.items = [
+//     { "id": 10, "productName": "Áo Nike", "colorName": "Đỏ", "sizeLabel": "M", "qty": 1 },
+//     { "id": 11, "productName": "Quần Adidas", "colorName": "Đen", "sizeLabel": "L", "qty": 2 }
+//   ]
+//
+// Khi review item "Áo Nike Đỏ M" → orderedProductId = 10
+// Khi review item "Quần Adidas Đen L" → orderedProductId = 11
 ```
 
 ---

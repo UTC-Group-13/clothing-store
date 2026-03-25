@@ -2,7 +2,7 @@
 
 > **Backend API cho website bán quần áo trực tuyến**  
 > Spring Boot 3.5.11 | Java 21 | MySQL 8.0 | JWT Authentication  
-> **Trạng thái:** 88% hoàn thành — 81 API endpoints
+> **Trạng thái:** 94% hoàn thành — 86 API endpoints
 
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.11-brightgreen.svg)](https://spring.io/projects/spring-boot)
@@ -20,6 +20,7 @@
 | 💻 **Frontend API Guide** | API reference cho frontend: 81 endpoints, request/response examples, code mẫu | [FRONTEND_API_GUIDE.md](FRONTEND_API_GUIDE.md) |
 | 🗄️ **Database Analysis** | Phân tích schema 21 bảng, FK constraints, business logic, performance | [DATABASE_ANALYSIS.md](DATABASE_ANALYSIS.md) |
 | 🗺️ **Use Case Diagram** | Sơ đồ use case tổng quan (Guest / User / Admin) | [USE_CASES.md](USE_CASES.md) |
+| 🌟 **Reviews Design** | Thiết kế module đánh giá: 5 API endpoints, chống fake review, batch load | [REVIEWS_DESIGN.md](REVIEWS_DESIGN.md) |
 
 ### 🔗 Tài Liệu Tham Khảo Ngoài
 
@@ -58,7 +59,7 @@ mvn spring-boot:run
 
 | URL | Mô tả |
 |-----|-------|
-| http://localhost:8080/swagger-ui.html | Swagger UI (test 81 APIs) |
+| http://localhost:8080/swagger-ui.html | Swagger UI (test 86 APIs) |
 | http://localhost:8080/actuator/health | Health check |
 | `POST /api/sample-data/generate` | Tạo 50 sản phẩm mẫu |
 
@@ -85,9 +86,9 @@ mvn spring-boot:run
 ✅ File Upload (3 APIs)             [██████████] 100%
 ✅ Sample Data (1 API)              [██████████] 100%
 ⚠️ Promotion (0 APIs)              [░░░░░░░░░░]   0%  (Entity có, chưa API)
-⚠️ Reviews (0 APIs)                [░░░░░░░░░░]   0%  (Entity có, chưa API)
+⚠️ Reviews (5 APIs)                [██████████] 100%
 
-Overall: 81 APIs · 15/17 modules   [█████████░]  88%
+Overall: 86 APIs · 16/17 modules   [█████████░]  94%
 ```
 
 > **Chi tiết:** [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) · [DATABASE_ANALYSIS.md](DATABASE_ANALYSIS.md)
@@ -100,7 +101,7 @@ Overall: 81 APIs · 15/17 modules   [█████████░]  88%
 |-------|----------|--------|
 | **Phase 1** ✅ | Product Catalog, Auth, Categories, Colors, Sizes | Done |
 | **Phase 2** ✅ | Cart, Orders, Addresses, Payments, Shipping, File Upload | Done |
-| **Phase 3** 📅 | Reviews System, Promotion System | Todo |
+| **Phase 3** 🔄 | Reviews System ✅, Promotion System | In Progress |
 | **Phase 4** 📅 | Payment Gateway Webhooks, Email Notifications, Analytics | Todo |
 
 ---
@@ -153,7 +154,7 @@ Product (tên, giá gốc, brand, material)
 
 ---
 
-## 📡 API ENDPOINTS (81 APIs)
+## 📡 API ENDPOINTS (86 APIs)
 
 ### Public (không cần token)
 ```
@@ -166,6 +167,8 @@ GET    /api/variant-stocks/variant/{id}        Tất cả size
 GET    /api/colors · /sizes · /payment-types   Danh sách config
 GET    /api/shipping-methods · /order-statuses Config
 GET    /api/shop-bank-accounts/active          TK NH shop
+GET    /api/reviews/product/{id}               Reviews sản phẩm
+GET    /api/reviews/product/{id}/summary       Thống kê đánh giá
 ```
 
 ### User (cần JWT)
@@ -175,6 +178,7 @@ CRUD   /api/cart + /cart/items/{id}             Giỏ hàng (5 APIs)
 POST   /api/orders · GET · PATCH /cancel       Đơn hàng (4 APIs)
 CRUD   /api/addresses + PATCH /default          Địa chỉ (5 APIs)
 CRUD   /api/payment-methods + PATCH /default    Thanh toán (5 APIs)
+POST   /api/reviews · GET /my · DELETE /{id}   Đánh giá (3 APIs)
 POST   /api/files/image · /images               Upload ảnh
 ```
 
@@ -240,6 +244,7 @@ FILE_UPLOAD_DIR=C:\CODE\uploads\images
 | 💻 Tích hợp frontend | [FRONTEND_API_GUIDE.md](FRONTEND_API_GUIDE.md) |
 | 🤖 AI coding agent | [AGENTS.md](AGENTS.md) |
 | 🗺️ Use case diagram | [USE_CASES.md](USE_CASES.md) |
+| 🌟 Đánh giá sản phẩm (Reviews) | [REVIEWS_DESIGN.md](REVIEWS_DESIGN.md) |
 | 🗄️ Database design | [DATABASE_ANALYSIS.md](DATABASE_ANALYSIS.md) |
 
 ---
@@ -315,10 +320,9 @@ POST /api/orders
 
 ## 🤝 CONTRIBUTING
 
-### Còn thiếu 2 module:
+### Còn thiếu 1 module:
 
-1. **Reviews System** — Entity + Repo có rồi, cần Service + Controller
-2. **Promotion System** — Entity + Repo có rồi, cần ServiceImpl + Controller
+1. **Promotion System** — Entity + Repo có rồi, cần ServiceImpl + Controller
 
 ### Quy trình:
 1. Đọc [AGENTS.md](AGENTS.md) — code patterns bắt buộc
@@ -331,12 +335,13 @@ POST /api/orders
 ## 📝 CHANGELOG
 
 ### v0.0.1-SNAPSHOT (March 25, 2026)
-- ✅ 17 Controllers · 81 APIs · 21 Database Tables
+- ✅ 18 Controllers · 86 APIs · 21 Database Tables
 - ✅ Auth (JWT + BCrypt) · Product Catalog 3 tầng (45 APIs)
 - ✅ Cart (5) · Orders (7) · Addresses (5) · Payments (10) · Config (24 APIs)
+- ✅ Reviews (5 APIs) — chống fake review qua FK tới order_line
 - ✅ File Upload · Sample Data · VietQR · Swagger · i18n · CORS · Docker
-- ✅ 6 documentation files
-- ⚠️ Todo: Promotion · Reviews · Payment Webhooks · Email
+- ✅ 7 documentation files
+- ⚠️ Todo: Promotion · Payment Webhooks · Email
 
 ---
 

@@ -347,6 +347,7 @@ CREATE TABLE user_review
     ordered_product_id INT,
     rating_value       INT,
     comment            VARCHAR(2000),
+    created_at         DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT pk_review PRIMARY KEY (id),
     CONSTRAINT fk_review_user FOREIGN KEY (user_id) REFERENCES site_user (id),
     CONSTRAINT fk_review_product FOREIGN KEY (ordered_product_id) REFERENCES order_line (id)
