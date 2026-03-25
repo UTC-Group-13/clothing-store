@@ -1,33 +1,25 @@
 # 🛍️ Clothing Store E-commerce API
 
 > **Backend API cho website bán quần áo trực tuyến**  
-> Spring Boot 3.5.11 | Java 21 | MySQL 8.0 | JWT Authentication
+> Spring Boot 3.5.11 | Java 21 | MySQL 8.0 | JWT Authentication  
+> **Trạng thái:** 88% hoàn thành — 81 API endpoints
 
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.11-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![MySQL](https://img.shields.io/badge/MySQL-8.0-blue.svg)](https://www.mysql.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ---
 
 ## 📚 TÀI LIỆU DỰ ÁN
 
-### 🎯 Tài Liệu Chính
-
 | Tài liệu | Mô tả | Link |
 |----------|-------|------|
-| 📊 **Project Analysis** | Phân tích tổng quan dự án: đánh giá code, chức năng đã có/thiếu, roadmap phát triển, vấn đề tiềm ẩn (40+ trang) | [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) |
-| 🎨 **System Flow Diagram** | Sơ đồ trực quan (Mermaid): kiến trúc, luồng authentication, product flow, database ER diagram, use cases (10+ diagrams) | [SYSTEM_FLOW_DIAGRAM.md](SYSTEM_FLOW_DIAGRAM.md) |
-| 📋 **API Endpoints List** | Danh sách đầy đủ 105 APIs: 42 đã triển khai + 63 thiếu, request/response examples, business logic chi tiết | [API_ENDPOINTS_LIST.md](API_ENDPOINTS_LIST.md) |
-| 📦 **Project Summary** | Tổng quan dự án: tech stack, cấu trúc thư mục, dependencies, deployment guide | [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) |
-| 🗺️ **Use Case Diagram** | Sơ đồ use case tổng quan (Guest/User/Admin, Payment/Shipping) | [USE_CASES.md](USE_CASES.md) |
-
-### 🛠️ Hướng Dẫn Kỹ Thuật
-
-| Tài liệu | Mô tả | Link |
-|----------|-------|------|
-| 🛍️ **Product Creation Flow** | Hướng dẫn từng bước tạo sản phẩm hoàn chỉnh: từ category → variation → product → product item (với API examples) | [PRODUCT_CREATION_FLOW.md](PRODUCT_CREATION_FLOW.md) |
-| 🔧 **CORS Fix Guide** | Hướng dẫn sửa lỗi CORS khi ghép frontend: cấu hình chi tiết, testing, troubleshooting | [CORS_FIX.md](CORS_FIX.md) |
+| 🤖 **Agents Guide** | Hướng dẫn cho AI coding agents: kiến trúc 3 tầng, code patterns, workflows | [AGENTS.md](AGENTS.md) |
+| 📦 **Project Summary** | Tổng quan: tech stack, 81 endpoints, business logic, deployment | [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) |
+| 🛍️ **Product Flow** | Luồng tạo sản phẩm 6 bước: Category → Color → Size → Product → Variant → Stock | [PRODUCT_FLOW.md](PRODUCT_FLOW.md) |
+| 💻 **Frontend API Guide** | API reference cho frontend: 81 endpoints, request/response examples, code mẫu | [FRONTEND_API_GUIDE.md](FRONTEND_API_GUIDE.md) |
+| 🗄️ **Database Analysis** | Phân tích schema 21 bảng, FK constraints, business logic, performance | [DATABASE_ANALYSIS.md](DATABASE_ANALYSIS.md) |
+| 🗺️ **Use Case Diagram** | Sơ đồ use case tổng quan (Guest / User / Admin) | [USE_CASES.md](USE_CASES.md) |
 
 ### 🔗 Tài Liệu Tham Khảo Ngoài
 
@@ -41,477 +33,311 @@
 
 ## 🚀 QUICK START
 
-### Yêu Cầu Hệ Thống
-- Java 21+
-- Maven 3.8+
-- MySQL 8.0+
-- Git
+### Yêu Cầu
+- Java 21+ · Maven 3.8+ · MySQL 8.0 (port 3307) · Docker (tuỳ chọn)
 
-### Cài Đặt & Chạy
+### Option 1 — Docker Compose (Khuyến nghị ⭐)
 
 ```powershell
-# 1. Clone repository
 git clone <repository-url>
+cd clothing-store
+docker-compose up -d          # MySQL (3307) + App (8080)
+docker-compose logs -f app    # Xem logs
+```
+
+### Option 2 — Maven
+
+```powershell
 cd clothing-store/ec
-
-# 2. Cấu hình database (application.yml hoặc biến môi trường)
-$env:SPRING_DATASOURCE_URL="jdbc:mysql://localhost:3306/clothing_db"
-$env:SPRING_DATASOURCE_USERNAME="root"
-$env:SPRING_DATASOURCE_PASSWORD="your_password"
-
-# 3. Tạo database và import schema
-mysql -u root -p < src/main/resources/init_sql/init.sql
-
-# 4. Build & Run
+mysql -h localhost -P 3307 -u root -p < src/main/resources/init_sql/init.sql
 mvn clean install
 mvn spring-boot:run
-
-# 5. Truy cập
-# API: http://localhost:8080
-# Swagger: http://localhost:8080/swagger-ui.html
 ```
+
+### Sau khi chạy
+
+| URL | Mô tả |
+|-----|-------|
+| http://localhost:8080/swagger-ui.html | Swagger UI (test 81 APIs) |
+| http://localhost:8080/actuator/health | Health check |
+| `POST /api/sample-data/generate` | Tạo 50 sản phẩm mẫu |
 
 ---
 
 ## 📊 TRẠNG THÁI DỰ ÁN
 
-### ✅ Đã Hoàn Thành (40%)
-- ✅ Authentication & JWT
-- ✅ Product Management (CRUD đầy đủ)
-- ✅ Category Management (hỗ trợ phân cấp)
-- ✅ Variation & Options Management
-- ✅ Product Configuration
-- ✅ File Upload (images)
-- ✅ API Documentation (Swagger)
-- ✅ Error Handling
-- ✅ CORS Configuration
+```
+✅ Authentication (3 APIs)          [██████████] 100%
+✅ Categories (8 APIs)              [██████████] 100%
+✅ Colors (5 APIs)                  [██████████] 100%
+✅ Sizes (6 APIs)                   [██████████] 100%
+✅ Products (9 APIs)                [██████████] 100%
+✅ Product Variants (7 APIs)        [██████████] 100%
+✅ Variant Stocks (8 APIs)          [██████████] 100%
+✅ Shopping Cart (5 APIs)           [██████████] 100%
+✅ Orders (7 APIs)                  [██████████] 100%
+✅ User Addresses (5 APIs)          [██████████] 100%
+✅ Payment Methods (5 APIs)         [██████████] 100%
+✅ Payment Types (6 APIs)           [██████████] 100%
+✅ Shipping Methods (6 APIs)        [██████████] 100%
+✅ Order Statuses (6 APIs)          [██████████] 100%
+✅ Shop Bank Accounts (6 APIs)      [██████████] 100%
+✅ File Upload (3 APIs)             [██████████] 100%
+✅ Sample Data (1 API)              [██████████] 100%
+⚠️ Promotion (0 APIs)              [░░░░░░░░░░]   0%  (Entity có, chưa API)
+⚠️ Reviews (0 APIs)                [░░░░░░░░░░]   0%  (Entity có, chưa API)
 
-### ⚠️ Đang Phát Triển (60%)
-- ❌ Shopping Cart APIs
-- ❌ Order Processing & Checkout
-- ❌ User Profile & Address Management
-- ❌ Payment Integration
-- ❌ Promotion System
-- ❌ User Reviews & Ratings
-- ❌ Inventory Management
-- ❌ Analytics Dashboard
+Overall: 81 APIs · 15/17 modules   [█████████░]  88%
+```
 
-> **Chi tiết đầy đủ:** Xem [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) → Phần "Bảng Đánh Giá Tổng Thể"
+> **Chi tiết:** [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) · [DATABASE_ANALYSIS.md](DATABASE_ANALYSIS.md)
 
 ---
 
 ## 🎯 ROADMAP
 
-| Phase | Timeline | Features | Status |
-|-------|----------|----------|--------|
-| **Phase 1** | ✅ Done | Product Catalog, Authentication | 100% |
-| **Phase 2** | 🚧 2-3 weeks | Shopping Cart, Order Processing, User Management | 0% |
-| **Phase 3** | 📅 1-2 weeks | Payment Gateway, Promotions | 0% |
-| **Phase 4** | 📅 1-2 weeks | Reviews, Inventory, Analytics | 0% |
-
-> **Roadmap chi tiết:** Xem [PROJECT_ANALYSIS.md](PROJECT_ANALYSIS.md) → Phần "Roadmap Khuyến Nghị"
+| Phase | Features | Status |
+|-------|----------|--------|
+| **Phase 1** ✅ | Product Catalog, Auth, Categories, Colors, Sizes | Done |
+| **Phase 2** ✅ | Cart, Orders, Addresses, Payments, Shipping, File Upload | Done |
+| **Phase 3** 📅 | Reviews System, Promotion System | Todo |
+| **Phase 4** 📅 | Payment Gateway Webhooks, Email Notifications, Analytics | Todo |
 
 ---
 
 ## 🔑 FEATURES CHÍNH
 
-### Authentication & Security
-- 🔐 JWT Token Authentication
-- 🛡️ Spring Security with Role-based Authorization
-- 👤 User Registration & Login
-- 🔑 BCrypt Password Encoding
+### 🔐 Authentication & Security
+- JWT Token (24h) · BCrypt Password · Role-based (USER / ADMIN)
 
-### Product Catalog
-- 📦 Product Management (CRUD)
-- 🏷️ Multi-level Category System
-- 🎨 Product Variants with SKU
-- 🔧 Flexible Variation System (Color, Size, etc.)
-- 🖼️ Image Upload & Management
-- 🔍 Product Search & Filtering
-- 📄 Pagination Support
+### 🛍️ Product Catalog — Mô hình 3 tầng
+```
+Product (tên, giá gốc, brand, material)
+  └─ ProductVariant (product × màu sắc, ảnh theo màu)
+       └─ VariantStock (variant × size = SKU + tồn kho + giá override)
+```
+- Categories cây cha/con · Colors (hex + slug) · Sizes (3 loại)
+- Tìm kiếm nâng cao: `name`, `categoryIds`, `colorIds`, `minPrice`, `maxPrice`
+- Phân trang · Sắp xếp · Slug SEO-friendly
 
-### API Features
-- 📖 Swagger/OpenAPI Documentation
-- 🌐 CORS Support for Frontend Integration
-- ✅ Input Validation
-- 🚨 Global Exception Handling
-- 🌍 i18n Messages (messages.properties)
-- 📊 Health Check & Metrics (Actuator)
+### 🛒 Shopping Cart
+- Tự tạo cart · Auto-merge items · Validate tồn kho · Summary join 7 bảng
+
+### 📦 Order Management
+- Đặt hàng transaction 10 bước (trừ tồn kho → xóa giỏ)
+- Hủy đơn PENDING → hoàn tồn kho · Mã đơn: `DH20260325001`
+- VietQR Integration · Admin quản lý đơn + cập nhật trạng thái
+
+### 👤 User Management
+- Địa chỉ giao hàng (CRUD + default) · Phương thức thanh toán (CRUD + default)
+
+### ⚙️ Configuration & Support
+- Payment Types · Shipping Methods · Order Statuses · Shop Bank Accounts
+- File Upload · Sample Data · Swagger UI · Exception Handler (i18n) · CORS
 
 ---
 
 ## 🏗️ TECH STACK
 
-### Backend
-- **Framework:** Spring Boot 3.5.11
-- **Language:** Java 21
-- **Security:** Spring Security + JWT (io.jsonwebtoken 0.12.6)
-- **Database:** MySQL 8.0 + Spring Data JPA + Hibernate
-- **Validation:** Jakarta Bean Validation
-- **Mapping:** MapStruct
-- **API Docs:** SpringDoc OpenAPI 2.8.5
-- **Build Tool:** Maven
-
-### DevOps
-- **Containerization:** Docker + Docker Compose
-- **Database:** MySQL 8.0 Container
-- **Monitoring:** Spring Boot Actuator
+| Layer | Công nghệ |
+|-------|----------|
+| **Framework** | Spring Boot 3.5.11 |
+| **Language** | Java 21 |
+| **Security** | Spring Security + JWT (io.jsonwebtoken 0.12.6) |
+| **Database** | MySQL 8.0 + Spring Data JPA + Hibernate |
+| **Validation** | Jakarta Bean Validation |
+| **Mapping** | MapStruct 1.6.3 · Lombok |
+| **API Docs** | SpringDoc OpenAPI 2.8.5 |
+| **Build** | Maven |
+| **DevOps** | Docker + Docker Compose · Spring Boot Actuator |
 
 ---
 
-## 📡 API ENDPOINTS
+## 📡 API ENDPOINTS (81 APIs)
 
-### Tổng Quan
-- **Tổng cộng:** 105 APIs (planned)
-- **Đã triển khai:** 42 APIs ✅
-- **Chưa triển khai:** 63 APIs ⚠️
-
-### Public Endpoints (không cần authentication)
+### Public (không cần token)
 ```
-POST   /api/auth/register          - Đăng ký tài khoản
-POST   /api/auth/login             - Đăng nhập
-GET    /api/products               - Danh sách sản phẩm
-GET    /api/products/{id}          - Chi tiết sản phẩm
-GET    /api/product-categories     - Danh sách danh mục
-GET    /swagger-ui.html            - API Documentation
+POST   /api/auth/register · /login             Auth
+GET    /api/products/search?name&categoryIds&…  Tìm kiếm nâng cao
+GET    /api/products/slug/{slug}               Chi tiết (SEO)
+GET    /api/categories/roots                   Danh mục gốc
+GET    /api/product-variants/product/{id}      Tất cả màu
+GET    /api/variant-stocks/variant/{id}        Tất cả size
+GET    /api/colors · /sizes · /payment-types   Danh sách config
+GET    /api/shipping-methods · /order-statuses Config
+GET    /api/shop-bank-accounts/active          TK NH shop
 ```
 
-### Protected Endpoints (cần JWT token)
+### User (cần JWT)
 ```
-POST   /api/auth/change-password               - Đổi mật khẩu
-GET    /api/cart                               - Xem giỏ hàng
-POST   /api/cart/items                         - Thêm vào giỏ
-PUT    /api/cart/items/{id}                    - Cập nhật số lượng
-DELETE /api/cart/items/{id}                    - Xóa khỏi giỏ
-DELETE /api/cart                               - Làm trống giỏ
-POST   /api/orders                             - Đặt hàng
-GET    /api/orders                             - Lịch sử đơn hàng
-GET    /api/orders/{id}                        - Chi tiết đơn hàng
-PATCH  /api/orders/{id}/cancel                 - Hủy đơn hàng
-GET    /api/addresses                          - Danh sách địa chỉ
-POST   /api/addresses                          - Thêm địa chỉ
-PUT    /api/addresses/{id}                     - Cập nhật địa chỉ
-DELETE /api/addresses/{id}                     - Xóa địa chỉ
-PATCH  /api/addresses/{id}/default             - Đặt địa chỉ mặc định
-GET    /api/payment-methods                    - Phương thức thanh toán
-POST   /api/payment-methods                    - Thêm phương thức
-PATCH  /api/payment-methods/{id}/default       - Đặt phương thức mặc định
-POST   /api/files/image                        - Upload ảnh
-POST   /api/files/images                       - Upload nhiều ảnh
+POST   /api/auth/change-password               Đổi mật khẩu
+CRUD   /api/cart + /cart/items/{id}             Giỏ hàng (5 APIs)
+POST   /api/orders · GET · PATCH /cancel       Đơn hàng (4 APIs)
+CRUD   /api/addresses + PATCH /default          Địa chỉ (5 APIs)
+CRUD   /api/payment-methods + PATCH /default    Thanh toán (5 APIs)
+POST   /api/files/image · /images               Upload ảnh
 ```
 
-### Admin Endpoints (cần JWT + ADMIN role)
+### Admin (cần JWT + ADMIN)
 ```
-POST   /api/products                           - Tạo sản phẩm
-PUT    /api/products/{id}                      - Cập nhật sản phẩm
-DELETE /api/products/{id}                      - Xóa sản phẩm
-POST/PUT/DELETE /api/categories                - CRUD danh mục
-POST/PUT/DELETE /api/colors                    - CRUD màu sắc
-POST/PUT/DELETE /api/sizes                     - CRUD sizes
-POST/PUT/DELETE /api/product-variants          - CRUD biến thể
-POST/PUT/DELETE /api/variant-stocks            - CRUD tồn kho
-GET    /api/orders/admin/all                   - Xem tất cả đơn hàng
-GET    /api/orders/admin/{id}                  - Chi tiết đơn bất kỳ
-PATCH  /api/orders/{id}/status                 - Cập nhật trạng thái đơn
-POST/PUT/DELETE /api/payment-types             - CRUD loại thanh toán
-POST/PUT/DELETE /api/shipping-methods          - CRUD phương thức vận chuyển
-POST/PUT/DELETE /api/order-statuses            - CRUD trạng thái
-POST/PUT/DELETE /api/shop-bank-accounts        - CRUD tài khoản NH shop
+CRUD   /api/products · categories · colors · sizes · variants · stocks
+GET    /api/orders/admin/all · /{id}           Quản lý đơn
+PATCH  /api/orders/{id}/status                 Cập nhật trạng thái
+CRUD   /api/payment-types · shipping-methods · order-statuses · shop-bank-accounts
 ```
 
-> **API Reference đầy đủ:** Xem [FRONTEND_API_GUIDE.md](FRONTEND_API_GUIDE.md) (1,819 dòng với examples)
+> **API Reference đầy đủ:** [FRONTEND_API_GUIDE.md](FRONTEND_API_GUIDE.md)
 
 ---
 
 ## 🗂️ DATABASE SCHEMA
 
-### 21 Tables (clothing_db)
-**Authentication:** site_user, user_address, address, country, user_payment_method, payment_type  
-**Product Catalog:** categories, colors, sizes, products, product_variants, variant_stocks  
-**Shopping:** shopping_cart, shopping_cart_item  
-**Orders:** shop_order, order_line, order_status, shipping_method  
-**Marketing:** promotion, promotion_category  
-**Reviews:** user_review
+### 21 bảng — `clothing_db` (MySQL 8.0, port 3307)
 
-### Luồng sản phẩm quần áo
+| Nhóm | Bảng |
+|------|------|
+| **Auth** | site_user · address · user_address · country |
+| **Catalog** | categories · colors · sizes · products · product_variants · variant_stocks |
+| **Shopping** | shopping_cart · shopping_cart_item |
+| **Orders** | shop_order · order_line · order_status · shipping_method |
+| **Payment** | payment_type · user_payment_method · shop_bank_account |
+| **Marketing** | promotion · promotion_category |
+| **Reviews** | user_review |
+
 ```
-categories (danh mục cha/con)
-    └── products (sản phẩm + base_price, brand, material)
-            └── product_variants (sản phẩm × màu sắc)
-                    └── variant_stocks (biến thể × size = SKU + tồn kho + giá riêng)
-
-colors (bảng màu sắc riêng)
-sizes  (bảng size riêng: clothing/numeric/shoes)
-```
-
-> **ER Diagram:** Xem [SYSTEM_FLOW_DIAGRAM.md](SYSTEM_FLOW_DIAGRAM.md) → Phần "Database Relationships"
-
----
-
-## 🛠️ DEVELOPMENT
-
-### Build Project
-```powershell
-mvn clean install
+Áo Nike (Product: basePrice 250k)
+  ├─ Màu Đỏ (Variant) → [img1, img2]
+  │   ├─ Size S → SKU: NIKE-RED-S, qty: 10, giá: 250k
+  │   └─ Size M → SKU: NIKE-RED-M, qty: 5,  giá: 250k
+  └─ Màu Xanh (Variant)
+      └─ Size M → SKU: NIKE-BLU-M, qty: 8,  giá: 280k (override ⭐)
 ```
 
-### Run Tests
-```powershell
-mvn test
-```
-
-### Run Application
-```powershell
-mvn spring-boot:run
-```
-
-### Build Docker Image
-```powershell
-docker build -t clothing-store-api ./ec
-```
-
-### Run with Docker Compose
-```powershell
-docker-compose up -d
-```
+> **Chi tiết:** [DATABASE_ANALYSIS.md](DATABASE_ANALYSIS.md)
 
 ---
 
 ## 🔧 CONFIGURATION
 
-### Environment Variables
 ```powershell
-# Database
-SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3306/clothing_db
+SPRING_DATASOURCE_URL=jdbc:mysql://localhost:3307/clothing_db
 SPRING_DATASOURCE_USERNAME=root
-SPRING_DATASOURCE_PASSWORD=your_password
-
-# JWT
-JWT_SECRET=your-secret-key-min-256-bits
-JWT_EXPIRATION=86400000
-
-# CORS (Frontend URLs)
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
-
-# File Upload
+SPRING_DATASOURCE_PASSWORD=123456
+JWT_SECRET=3cfa76ef14937c1c0ea519f8fc057a80fcd04a7420f8e8bcd0a7567c272e007b
+JWT_EXPIRATION=86400000                # 24 giờ
 FILE_UPLOAD_DIR=C:\CODE\uploads\images
 ```
 
-> **Chi tiết:** Xem `ec/src/main/resources/application.yml`
+> **Chi tiết:** `ec/src/main/resources/application.yml`
 
 ---
 
 ## 📖 HƯỚNG DẪN SỬ DỤNG
 
-### 1. Tạo Sản Phẩm Hoàn Chỉnh
-Xem hướng dẫn chi tiết 6 bước trong: [PRODUCT_CREATION_FLOW.md](PRODUCT_CREATION_FLOW.md)
-
-### 2. Sửa Lỗi CORS Khi Ghép Frontend
-Xem hướng dẫn: [CORS_FIX.md](CORS_FIX.md)
-
-### 3. Hiểu Luồng Hoạt Động Hệ Thống
-Xem các sơ đồ trực quan: [SYSTEM_FLOW_DIAGRAM.md](SYSTEM_FLOW_DIAGRAM.md)
-
-### 4. Implement Chức Năng Mới
-Tham khảo danh sách APIs và business logic: [API_ENDPOINTS_LIST.md](API_ENDPOINTS_LIST.md)
+| Mục đích | Tài liệu |
+|----------|----------|
+| 🛍️ Tạo sản phẩm (6 bước) | [PRODUCT_FLOW.md](PRODUCT_FLOW.md) |
+| 💻 Tích hợp frontend | [FRONTEND_API_GUIDE.md](FRONTEND_API_GUIDE.md) |
+| 🤖 AI coding agent | [AGENTS.md](AGENTS.md) |
+| 🗺️ Use case diagram | [USE_CASES.md](USE_CASES.md) |
+| 🗄️ Database design | [DATABASE_ANALYSIS.md](DATABASE_ANALYSIS.md) |
 
 ---
 
 ## 🧪 TESTING APIs
 
-### Option 1: Swagger UI (Recommended)
+### Swagger UI (Khuyến nghị ⭐)
 ```
 http://localhost:8080/swagger-ui.html
 ```
-- ✅ Interactive testing
-- ✅ Tự động generate request/response
-- ✅ Support JWT authentication
 
-### Option 2: Postman
-Import OpenAPI spec:
-```
-http://localhost:8080/v3/api-docs
-```
-
-### Option 3: cURL
+### cURL
 ```bash
-# Login
+# Đăng nhập
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"your_password"}'
+  -d '{"username":"admin","password":"123456"}'
 
-# Get Products
-curl http://localhost:8080/api/products
+# Tìm sản phẩm (Public)
+curl "http://localhost:8080/api/products/search?name=áo&minPrice=100000"
 
-# Create Product (with JWT)
-curl -X POST http://localhost:8080/api/products \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+# Đặt hàng (cần token)
+curl -X POST http://localhost:8080/api/orders \
+  -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"categoryId":1,"name":"Test Product","description":"Test"}'
+  -d '{"shippingAddressId":1,"paymentTypeId":1,"shippingMethodId":1}'
 ```
+
+### Postman
+Import: `http://localhost:8080/v3/api-docs`
 
 ---
 
-## 🎓 TECH INSIGHTS
+## 🎓 KIẾN TRÚC
 
-### Kiến Trúc
 ```
-Controller → Service → Repository → Entity → Database
-     ↓          ↓
-   DTO    Exception Handler
-```
-
-### Security Flow
-```
-Request → JwtAuthenticationFilter → SecurityContext → Controller
+Controller (REST)  →  Service (Logic)  →  Repository (JPA)  →  MySQL
+     ↕                     ↕
+   DTO  ←── MapStruct ──→ Entity
+     ↕
+GlobalExceptionHandler (i18n)
 ```
 
-### File Upload Flow
+### Order Transaction (10 bước)
 ```
-MultipartFile → FileStorageService → /uploads/images/{filename}
+POST /api/orders
+ 1. Validate address · payment · shipping
+ 2. Get cart items
+ 3. Check stock TẤT CẢ items
+ 4. Calculate total
+ 5. Create ShopOrder (PENDING)
+ 6. Create OrderLines
+ 7. DEDUCT STOCK  ← @Transactional
+ 8. CLEAR CART    ← rollback nếu fail
+ 9. Generate order code (DH20260325001)
+10. Generate VietQR URL
 ```
 
-> **Chi tiết:** Xem [SYSTEM_FLOW_DIAGRAM.md](SYSTEM_FLOW_DIAGRAM.md)
+> **Chi tiết:** [AGENTS.md](AGENTS.md) · [DATABASE_ANALYSIS.md](DATABASE_ANALYSIS.md)
 
 ---
 
 ## 🐛 TROUBLESHOOTING
 
-### Lỗi CORS khi gọi từ Frontend
-**Giải pháp:** [CORS_FIX.md](CORS_FIX.md)
-
-### Database Connection Failed
-```powershell
-# Kiểm tra MySQL đang chạy
-Get-Service MySQL80
-
-# Test connection
-mysql -h localhost -P 3306 -u root -p
-```
-
-### Port 8080 Already in Use
-```powershell
-# Tìm process đang dùng port 8080
-netstat -ano | findstr :8080
-
-# Kill process
-taskkill /PID <PID> /F
-```
-
-### JWT Token Invalid
-- Kiểm tra `JWT_SECRET` phải giống nhau giữa các lần chạy
-- Token hết hạn sau 24h (default)
-- Format header: `Authorization: Bearer <token>`
-
----
-
-## 📞 SUPPORT & CONTACT
-
-### 📚 Documentation (4,707 dòng)
-- 🤖 [AGENTS.md](AGENTS.md) - AI coding agent guide (677 dòng)
-- 📦 [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) - Tech overview (641 dòng)
-- 🛍️ [PRODUCT_FLOW.md](PRODUCT_FLOW.md) - Product workflow (746 dòng)
-- 💻 [FRONTEND_API_GUIDE.md](FRONTEND_API_GUIDE.md) - Frontend integration (1,819 dòng)
-- 🗄️ [DATABASE_ANALYSIS.md](DATABASE_ANALYSIS.md) - Database analysis (385 dòng)
-
-### 🌐 API Resources
-- **Swagger UI Local:** http://localhost:8080/swagger-ui.html
-- **Swagger UI Production:** http://160.30.113.40:8080/swagger-ui.html
-- **Health Check:** http://localhost:8080/actuator/health
-
-### 🔗 External Resources
-- 📐 [Database Design Reference](https://dbshostedfiles.s3.us-west-2.amazonaws.com/dbs/dbdesign_ecommerce.pdf)
-- 🎨 [Admin UI Design (Figma)](https://www.figma.com/design/JkquAUJzeAbacXGYoD6XmL/E-commerce-Management--Community-?node-id=6-1370&p=f&t=0Sa5lQIvLqv9Pg0p-0)
-- 🎨 [User UI Design (Figma)](https://www.figma.com/design/HR3jsiclQTgSriEY9EBz1A/E-commerce-Website-Template--Freebie---Community-?node-id=39-1402&p=f&t=rUKKMA46X9Ix9dRX-0)
-
-### 💡 Quick Links
-- **Tạo sản phẩm:** [PRODUCT_FLOW.md](PRODUCT_FLOW.md) - 6 bước chi tiết
-- **Tích hợp frontend:** [FRONTEND_API_GUIDE.md](FRONTEND_API_GUIDE.md) - 81 APIs với examples
-- **AI agent guide:** [AGENTS.md](AGENTS.md) - Patterns và best practices
-- **Database design:** [DATABASE_ANALYSIS.md](DATABASE_ANALYSIS.md) - FK constraints
-
----
-
-## 🎯 KEY HIGHLIGHTS
-
-### 📊 By The Numbers
-- **17 Controllers** triển khai đầy đủ
-- **81 API Endpoints** đang hoạt động
-- **21 Database Tables** được thiết kế tốt
-- **15/17 Modules** hoàn thành (88%)
-- **4,707 Dòng** documentation chi tiết
-- **10 Bước** transaction khi đặt hàng
-- **7 Bảng** join cho cart summary
-
-### 🚀 Technical Excellence
-- ✅ Transaction atomic với `@Transactional`
-- ✅ MapStruct mapping (IGNORE null strategy)
-- ✅ JPA Specification (dynamic search)
-- ✅ Global exception handler (i18n)
-- ✅ JWT stateless authentication
-- ✅ FK constraints enforcement
-- ✅ Auto-merge cart items
-- ✅ Price override flexibility
-
-### 📚 Documentation Excellence
-- ✅ **Swagger UI** - Interactive API testing
-- ✅ **AGENTS.md** - AI agent onboarding guide
-- ✅ **PRODUCT_FLOW.md** - Step-by-step product creation
-- ✅ **FRONTEND_API_GUIDE.md** - Complete frontend reference
-- ✅ **DATABASE_ANALYSIS.md** - Schema analysis + business logic
-
-**Đây là một trong những dự án Spring Boot được document tốt nhất!** 📖✨
-
----
-
-## 📈 PROJECT STATUS
-
-```
-✅ Product Catalog Module:     [██████████] 100%
-✅ Authentication Module:       [████████░░] 80%
-⚠️ Shopping Cart Module:       [░░░░░░░░░░] 0%
-⚠️ Order Management Module:    [░░░░░░░░░░] 0%
-⚠️ User Management Module:     [░░░░░░░░░░] 0%
-⚠️ Payment Module:              [░░░░░░░░░░] 0%
-⚠️ Promotion Module:            [░░░░░░░░░░] 0%
-⚠️ Review Module:               [░░░░░░░░░░] 0%
-
-Overall Progress:               [████░░░░░░] 40%
-```
-
-**Next Sprint:** Shopping Cart + Order Processing (Sprint 1 - 2 weeks)
+| Vấn đề | Giải pháp |
+|--------|----------|
+| Database Connection Failed | Kiểm tra MySQL: `mysql -h localhost -P 3307 -u root -p` |
+| Port 8080 Already in Use | `netstat -ano \| findstr :8080` rồi `taskkill /PID <PID> /F` |
+| JWT Token Invalid | Token hết hạn 24h → đăng nhập lại · Header: `Authorization: Bearer <token>` |
+| CORS Error | Backend cho phép `*` · Kiểm tra `Content-Type: application/json` |
 
 ---
 
 ## 🤝 CONTRIBUTING
 
-Xem roadmap và APIs cần implement trong: [API_ENDPOINTS_LIST.md](API_ENDPOINTS_LIST.md)
+### Còn thiếu 2 module:
 
-**Priority:** 
-1. 🔴 Shopping Cart APIs (6 endpoints)
-2. 🔴 Order Processing (8 endpoints)
-3. 🔴 User Address Management (6 endpoints)
+1. **Reviews System** — Entity + Repo có rồi, cần Service + Controller
+2. **Promotion System** — Entity + Repo có rồi, cần ServiceImpl + Controller
 
----
-
-## 📄 LICENSE
-
-MIT License - Xem file [LICENSE](LICENSE)
+### Quy trình:
+1. Đọc [AGENTS.md](AGENTS.md) — code patterns bắt buộc
+2. Follow existing patterns (Service → Controller → Mapper → DTO)
+3. Thêm message keys vào `messages.properties`
+4. Test qua Swagger UI
 
 ---
 
 ## 📝 CHANGELOG
 
-### v0.0.1-SNAPSHOT (Current)
-- ✅ Tạo project structure
-- ✅ Setup Spring Security + JWT
-- ✅ Product Catalog APIs (29 endpoints)
-- ✅ File Upload
-- ✅ CORS Configuration
-- ✅ Swagger Documentation
-- 📝 Complete project documentation (5 MD files)
+### v0.0.1-SNAPSHOT (March 25, 2026)
+- ✅ 17 Controllers · 81 APIs · 21 Database Tables
+- ✅ Auth (JWT + BCrypt) · Product Catalog 3 tầng (45 APIs)
+- ✅ Cart (5) · Orders (7) · Addresses (5) · Payments (10) · Config (24 APIs)
+- ✅ File Upload · Sample Data · VietQR · Swagger · i18n · CORS · Docker
+- ✅ 6 documentation files
+- ⚠️ Todo: Promotion · Reviews · Payment Webhooks · Email
 
 ---
 
 **Made with ❤️ using Spring Boot & GitHub Copilot**
-
