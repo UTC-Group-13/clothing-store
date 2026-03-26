@@ -18,6 +18,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
 import java.util.*;
@@ -34,21 +36,42 @@ public class ChatServiceImpl implements ChatService {
     private final ProductVariantRepository variantRepository;
     private final ObjectMapper objectMapper;
 
+    // ─── GitHub Models config (primary) ────────────────────────────────────────
+    @Value("${ai.provider:github}")
+    private String aiProvider;
+
+    @Value("${ai.api.key:}")
+    private String aiApiKey;
+
+    @Value("${ai.api.model:gpt-4o-mini}")
+    private String aiModel;
+
+    @Value("${ai.api.max-tokens:1024}")
+    private int aiMaxTokens;
+
+    // ─── Claude config (fallback) ───────────────────────────────────────────────
     @Value("${claude.api.key:}")
-    private String apiKey;
+    private String claudeApiKey;
 
     @Value("${claude.api.model:claude-3-haiku-20240307}")
-    private String model;
+    private String claudeModel;
 
     @Value("${claude.api.max-tokens:1024}")
-    private int maxTokens;
+    private int claudeMaxTokens;
 
-    private static final String CLAUDE_API_URL = "https://api.anthropic.com/v1/messages";
-    private static final String ANTHROPIC_VERSION  = "2023-06-01";
-    private static final int    MAX_HISTORY         = 20;
+    // ─── Constants ──────────────────────────────────────────────────────────────
+    private static final String GITHUB_MODELS_URL  = "https://models.inference.ai.azure.com/chat/completions";
+    private static final String CLAUDE_API_URL      = "https://api.anthropic.com/v1/messages";
+    private static final String ANTHROPIC_VERSION   = "2023-06-01";
+    private static final int    MAX_HISTORY          = 20;
     private static final int    MAX_CONTEXT_PRODUCTS = 8;
     private static final int    MAX_SUGGESTIONS      = 5;
     private static final long   SESSION_TTL_MS       = 2 * 60 * 60 * 1000L; // 2 giờ
+    private static final long   QUOTA_RETRY_MS       = 60 * 60 * 1000L;      // 1 giờ
+
+    // ─── Circuit breaker ────────────────────────────────────────────────────────
+    private volatile boolean quotaExhausted   = false;
+    private volatile long    quotaExhaustedAt = 0L;
 
     // ─── Session storage (in-memory) ───────────────────────────────────────────
     private static class SessionData {
@@ -82,8 +105,8 @@ public class ChatServiceImpl implements ChatService {
         // 5. Build system prompt với context sản phẩm
         String systemPrompt = buildSystemPrompt(relevantProducts, categoryMap, username);
 
-        // 6. Gọi Claude API
-        String aiMessage = callClaudeApi(systemPrompt, session.messages);
+        // 6. Gọi AI API (GitHub Models → Claude fallback)
+        String aiMessage = callAI(systemPrompt, session.messages);
 
         // 7. Lưu phản hồi AI vào lịch sử
         session.messages.add(Map.of("role", "assistant", "content", aiMessage));
@@ -244,41 +267,119 @@ public class ChatServiceImpl implements ChatService {
         return sb.toString();
     }
 
-    // ─── Claude API Call ────────────────────────────────────────────────────────
+    // ─── AI Dispatcher ──────────────────────────────────────────────────────────
+
+    /**
+     * Gọi AI theo provider được cấu hình.
+     * Thứ tự ưu tiên: GitHub Models → Claude → fallback
+     */
+    private String callAI(String systemPrompt, List<Map<String, String>> history) {
+        // Circuit breaker: skip nếu quota vừa hết
+        if (quotaExhausted) {
+            long elapsed = System.currentTimeMillis() - quotaExhaustedAt;
+            if (elapsed < QUOTA_RETRY_MS) {
+                log.debug("AI quota exhausted, dung fallback (con {}m).", (QUOTA_RETRY_MS - elapsed) / 60_000);
+                return buildFallbackResponse(true);
+            }
+            quotaExhausted = false;
+            log.info("AI circuit breaker reset. Thu goi AI lai.");
+        }
+
+        boolean useGitHub = "github".equalsIgnoreCase(aiProvider)
+                && aiApiKey != null && !aiApiKey.isBlank();
+
+        if (useGitHub) {
+            return callGitHubModels(systemPrompt, history);
+        }
+
+        boolean useClaude = claudeApiKey != null && !claudeApiKey.isBlank();
+        if (useClaude) {
+            return callClaudeApi(systemPrompt, history);
+        }
+
+        log.debug("Chua cau hinh AI API key. Su dung fallback response.");
+        return buildFallbackResponse(false);
+    }
+
+    // ─── GitHub Models (OpenAI-compatible) ──────────────────────────────────────
+
+    @SuppressWarnings("unchecked")
+    private String callGitHubModels(String systemPrompt, List<Map<String, String>> history) {
+        try {
+            // Build messages theo OpenAI format: system + history
+            List<Map<String, Object>> messages = new ArrayList<>();
+            messages.add(Map.of("role", "system", "content", systemPrompt));
+            history.stream()
+                   .filter(m -> "user".equals(m.get("role")) || "assistant".equals(m.get("role")))
+                   .forEach(m -> messages.add(Map.of(
+                           "role",    m.get("role"),
+                           "content", m.get("content")
+                   )));
+
+            Map<String, Object> requestBody = new LinkedHashMap<>();
+            requestBody.put("model",       aiModel);       // "gpt-4o-mini"
+            requestBody.put("messages",    messages);
+            requestBody.put("max_tokens",  aiMaxTokens);
+            requestBody.put("temperature", 0.7);
+
+            String raw = RestClient.create()
+                    .post()
+                    .uri(GITHUB_MODELS_URL)
+                    .header("Authorization", "Bearer " + aiApiKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(requestBody)
+                    .retrieve()
+                    .body(String.class);
+
+            if (raw == null || raw.isBlank()) return buildFallbackResponse(false);
+
+            Map<String, Object> response = objectMapper.readValue(raw, Map.class);
+            List<Map<String, Object>> choices = (List<Map<String, Object>>) response.get("choices");
+            if (choices != null && !choices.isEmpty()) {
+                Map<String, Object> msg = (Map<String, Object>) choices.getFirst().get("message");
+                if (msg != null && msg.get("content") instanceof String s) {
+                    log.debug("GitHub Models ({}) tra loi thanh cong.", aiModel);
+                    return s;
+                }
+            }
+
+        } catch (HttpClientErrorException e) {
+            handleHttpError("GitHub Models", e.getStatusCode().value(), e.getResponseBodyAsString());
+        } catch (ResourceAccessException e) {
+            log.warn("Khong ket noi duoc GitHub Models: {}", e.getMessage());
+        } catch (Exception e) {
+            log.error("Loi goi GitHub Models: {}", e.getMessage());
+        }
+
+        return buildFallbackResponse(false);
+    }
+
+    // ─── Claude API ──────────────────────────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
     private String callClaudeApi(String systemPrompt, List<Map<String, String>> history) {
-        if (apiKey == null || apiKey.isBlank()) {
-            log.warn("Claude API key chua duoc cau hinh (claude.api.key). Su dung fallback response.");
-            return buildFallbackResponse();
-        }
-
         try {
-            // Chỉ gửi role user/assistant (không gửi system trong messages[])
             List<Map<String, String>> messages = history.stream()
                     .filter(m -> "user".equals(m.get("role")) || "assistant".equals(m.get("role")))
                     .collect(Collectors.toList());
 
             Map<String, Object> requestBody = new LinkedHashMap<>();
-            requestBody.put("model", model);
-            requestBody.put("max_tokens", maxTokens);
-            requestBody.put("system", systemPrompt);
-            requestBody.put("messages", messages);
+            requestBody.put("model",      claudeModel);
+            requestBody.put("max_tokens", claudeMaxTokens);
+            requestBody.put("system",     systemPrompt);
+            requestBody.put("messages",   messages);
 
-            RestClient restClient = RestClient.create();
-
-            String raw = restClient.post()
+            String raw = RestClient.create()
+                    .post()
                     .uri(CLAUDE_API_URL)
-                    .header("x-api-key", apiKey)
+                    .header("x-api-key", claudeApiKey)
                     .header("anthropic-version", ANTHROPIC_VERSION)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(requestBody)
                     .retrieve()
                     .body(String.class);
 
-            if (raw == null || raw.isBlank()) {
-                return buildFallbackResponse();
-            }
+            if (raw == null || raw.isBlank()) return buildFallbackResponse(false);
 
             Map<String, Object> response = objectMapper.readValue(raw, Map.class);
             List<Map<String, Object>> content = (List<Map<String, Object>>) response.get("content");
@@ -287,17 +388,45 @@ public class ChatServiceImpl implements ChatService {
                 if (text instanceof String s) return s;
             }
 
+        } catch (HttpClientErrorException e) {
+            handleHttpError("Claude", e.getStatusCode().value(), e.getResponseBodyAsString());
+        } catch (ResourceAccessException e) {
+            log.warn("Khong ket noi duoc Claude API: {}", e.getMessage());
         } catch (Exception e) {
-            log.error("Loi goi Claude API: {}", e.getMessage(), e);
+            log.error("Loi goi Claude API: {}", e.getMessage());
         }
 
-        return buildFallbackResponse();
+        return buildFallbackResponse(false);
     }
 
-    private String buildFallbackResponse() {
-        return "Xin chao! Toi la tro ly mua sam. "
-                + "Ban co the xem cac san pham duoc goi y ben duoi. "
-                + "Hay lien he cua hang neu can tu van them nhe!";
+    // ─── Error Handler ───────────────────────────────────────────────────────────
+
+    private void handleHttpError(String provider, int statusCode, String body) {
+        String shortBody = body != null && body.length() > 200 ? body.substring(0, 200) : body;
+
+        if (body != null && (body.contains("credit balance is too low")
+                || body.contains("insufficient_quota")
+                || body.contains("rate limit")
+                || statusCode == 429)) {
+            quotaExhausted   = true;
+            quotaExhaustedAt = System.currentTimeMillis();
+            log.warn("[{}] API het quota/credits (HTTP {}). Tam dung 1 gio. Chi tiet: {}",
+                     provider, statusCode, shortBody);
+        } else if (statusCode == 401) {
+            log.error("[{}] API key khong hop le (401). Kiem tra lai AI_API_KEY.", provider);
+        } else {
+            log.error("[{}] API loi HTTP {}: {}", provider, statusCode, shortBody);
+        }
+    }
+
+    private String buildFallbackResponse(boolean quotaEmpty) {
+        if (quotaEmpty) {
+            return "Xin chào! Hiện tại trợ lý AI tạm thời không khả dụng. "
+                 + "Bạn có thể xem các sản phẩm gợi ý bên dưới hoặc liên hệ cửa hàng để được tư vấn trực tiếp nhé!";
+        }
+        return "Xin chào! Tôi là trợ lý mua sắm của cửa hàng. "
+             + "Bạn có thể xem các sản phẩm gợi ý bên dưới. "
+             + "Liên hệ cửa hàng nếu cần tư vấn thêm nhé!";
     }
 
     // ─── Suggestion Builder ─────────────────────────────────────────────────────
@@ -322,7 +451,4 @@ public class ChatServiceImpl implements ChatService {
                 .collect(Collectors.toList());
     }
 }
-
-
-
 
