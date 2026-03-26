@@ -54,6 +54,15 @@ jwt:
 # ============================================================
 file:
   upload:
-    dir: ${FILE_UPLOAD_DIR:C:\CODE\uploads\images}      # Thư mục lưu file trên disk
-    url-prefix: C:\CODE\uploads\images                # Prefix URL để FE truy cập ảnh
+    dir: ${FILE_UPLOAD_DIR:C:\CODE\uploads\images}      # Thu muc luu file tren disk
+    url-prefix: C:\CODE\uploads\images                # Prefix URL de FE truy cap anh
+
+# ============================================================
+# Claude AI API Configuration
+# ============================================================
+claude:
+  api:
+    key: ${CLAUDE_API_KEY:}                              # API key tu https://console.anthropic.com
+    model: ${CLAUDE_MODEL:claude-3-haiku-20240307}       # claude-3-haiku (nhanh, re) hoac claude-3-5-sonnet
+    max-tokens: ${CLAUDE_MAX_TOKENS:1024}                # So token toi da trong moi phan hoi
 

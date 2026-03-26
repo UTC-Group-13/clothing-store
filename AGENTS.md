@@ -57,9 +57,11 @@ Xem chi tiết: `PRODUCT_FLOW.md`
 
 **Public endpoints (không cần token):**
 - `POST /api/auth/**` (register, login)
+- `POST /api/chat/message` (AI chatbot — không cần đăng nhập)
 - `GET /api/products/**`, `/api/categories/**`, `/api/colors/**`, `/api/sizes/**`
 - `GET /api/payment-types/**`, `/api/shipping-methods/**`, `/api/order-statuses/**`
 - `GET /api/shop-bank-accounts/active` (user xem để chuyển khoản)
+- `GET /api/reviews/product/**` (xem reviews sản phẩm)
 - `/swagger-ui/**`, `/v3/api-docs/**`, `/uploads/images/**`
 
 **Endpoints cần xác thực (JWT Bearer token):**
@@ -307,7 +309,21 @@ Response:
 - ✅ CORS Configuration (hỗ trợ frontend)
 - ✅ Global Exception Handler với i18n
 
-### ❌ CHƯA TRIỂN KHAI (30%)
+#### 8. Product Reviews & Ratings (5 endpoints) ✨ MỚI
+- ✅ Tạo đánh giá (`POST /api/reviews`) — chỉ sau khi mua hàng
+- ✅ Xem reviews theo sản phẩm (`GET /api/reviews/product/{productId}`)
+- ✅ Xem reviews của tôi (`GET /api/reviews/my`)
+- ✅ Thống kê đánh giá (`GET /api/reviews/product/{productId}/summary`)
+- ✅ Xóa đánh giá (`DELETE /api/reviews/{id}`)
+
+#### 9. AI Chatbot Shopping Assistant (2 endpoints) ✨ MỚI
+- ✅ Gửi tin nhắn (`POST /api/chat/message`) — **không cần đăng nhập**
+- ✅ Xóa session (`DELETE /api/chat/session/{sessionId}`)
+- 🔌 Tích hợp Claude API (Anthropic) — `claude-3-haiku-20240307`
+- 🧠 In-memory session (tối đa 20 tin nhắn, TTL 2 giờ)
+- 🔍 Tự động tìm sản phẩm liên quan từ DB làm context cho AI
+
+### ❌ CHƯA TRIỂN KHAI (6%)
 
 #### 1. Promotion System (0%)
 - ❌ CRUD khuyến mãi (discount %, fixed amount)
@@ -315,18 +331,12 @@ Response:
 - ❌ Khuyến mãi theo category
 - 📝 Entity đã có (`Promotion`, `PromotionCategory`), chưa có Service/Controller
 
-#### 2. Product Reviews & Ratings (0%)
-- ❌ User đánh giá sản phẩm (rating, comment)
-- ❌ Xem reviews theo sản phẩm
-- ❌ Like/Report review
-- 📝 Entity đã có (`UserReview`), Repository đã có, chưa có Service/Controller
-
-#### 3. Advanced Features
+#### 2. Advanced Features
 - ❌ Payment Gateway Integration (VNPAY, MoMo, ZaloPay)
 - ❌ Email notifications (đơn hàng, reset password)
 - ❌ Inventory alerts (cảnh báo hết hàng)
 - ❌ Admin Analytics Dashboard
-- ❌ Product search nâng cao (full-text, filters phức tạp)
+- ❌ Product search nâng cao (full-text search, Elasticsearch)
 
 ---
 
@@ -478,6 +488,8 @@ public class Entity {
 | `ShopBankAccountController` | 6 | Tài khoản NH shop (ADMIN) |
 | `FileUploadController` | 1 | Upload ảnh sản phẩm |
 | `SampleDataController` | 1 | Tạo dữ liệu mẫu để test |
+| **`ChatController`** | **2** | **AI chatbot gợi ý sản phẩm (mới ✨)** |
+| `ReviewController` | 5 | Đánh giá sản phẩm (mới ✨) |
 
 ### Key Services Implemented
 
@@ -569,16 +581,18 @@ ec/
 │   │   ├── WebMvcConfig.java                  ★ CORS + static resources
 │   │   ├── SwaggerConfig.java
 │   │   └── MessageConfig.java                 ★ i18n setup
-│   ├── controller/          (17 controllers)
-│   ├── service/             (17 interfaces)
-│   ├── service/impl/        (17 implementations)
+│   ├── controller/          (19 controllers)
+│   ├── service/             (19 interfaces)
+│   ├── service/impl/        (19 implementations)
 │   ├── repository/          (21 repositories)
 │   ├── entity/              (21 entities)
-│   ├── dto/                 (30+ DTOs)
+│   ├── dto/
+│   │   ├── chat/            ★ ChatRequest, ChatResponse, ProductSuggestionDTO
+│   │   └── (30+ other DTOs)
 │   ├── mapper/              (6 MapStruct mappers)
 │   └── exception/           (2 custom exceptions)
 ├── src/main/resources/
-│   ├── application.yml      ★ Cấu hình DB, JWT, upload
+│   ├── application.yml      ★ Cấu hình DB, JWT, upload, Claude AI
 │   ├── messages.properties  ★ Thông báo i18n
 │   └── init_sql/init.sql    ★ Schema database
 └── pom.xml                  ★ Dependencies
@@ -588,7 +602,7 @@ Thư mục gốc:
 ├── AGENTS.md               (file này)
 ├── README.md
 ├── PRODUCT_FLOW.md          ★ Hướng dẫn tạo sản phẩm từng bước
-├── FRONTEND_API_GUIDE.md    ★ API reference cho FE
+├── FRONTEND_API_GUIDE.md    ★ API reference cho FE (có hướng dẫn Chat AI)
 └── DATABASE_ANALYSIS.md     ★ Phân tích schema & FK
 ```
 
@@ -648,6 +662,47 @@ String qrUrl = generateVietQRUrl(shopBankAccount, order, orderTotal);
 ```
 
 User quét QR → tự động điền số tiền + nội dung chuyển khoản (order code).
+
+### 5. AI Chatbot — Kiến Trúc & Lưu Ý
+
+**Files liên quan:**
+```
+dto/chat/ChatRequest.java          ← Input: message + sessionId + productId
+dto/chat/ChatResponse.java         ← Output: message + sessionId + suggestions[]
+dto/chat/ProductSuggestionDTO.java ← Gợi ý sản phẩm kèm thumbnail
+service/ChatService.java           ← Interface
+service/impl/ChatServiceImpl.java  ← Logic chính
+controller/ChatController.java     ← 2 endpoints
+```
+
+**Luồng xử lý trong `ChatServiceImpl.chat()`:**
+```
+1. cleanupOldSessions()             — dọn session hết hạn (TTL 2h)
+2. resolveSessionId()               — lấy/tạo UUID session
+3. searchRelevantProducts()         — query DB tìm sản phẩm liên quan
+4. buildCategoryMap()               — map categoryId → categoryName
+5. buildThumbnailMap()              — map productId → thumbnail URL
+6. Thêm user message vào history
+7. buildSystemPrompt()              — tạo prompt với danh sách sản phẩm thực
+8. callClaudeApi()                  — gọi api.anthropic.com/v1/messages
+9. Lưu AI response vào history      — trimHistory() nếu > 20 tin nhắn
+10. buildSuggestions()              — trả về top 5 sản phẩm gợi ý
+```
+
+**Cấu hình cần thiết** (`application.yml` / env vars):
+```yaml
+claude:
+  api:
+    key: ${CLAUDE_API_KEY:}          # BẮT BUỘC để AI hoạt động
+    model: claude-3-haiku-20240307   # Có thể đổi sang claude-3-5-sonnet
+    max-tokens: 1024
+```
+
+**Fallback khi không có API key:**
+- Bot vẫn trả về danh sách sản phẩm gợi ý từ DB
+- Message fallback: "Xin chào! Bạn có thể xem sản phẩm bên dưới..."
+
+**⚠️ Session lưu in-memory (ConcurrentHashMap) — không persist qua restart!**
 
 ---
 

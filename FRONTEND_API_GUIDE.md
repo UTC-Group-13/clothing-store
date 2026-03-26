@@ -1,8 +1,8 @@
 # 📘 HƯỚNG DẪN TÍCH HỢP API - CLOTHING STORE
 ## Dành cho Frontend Developer
 
-> **Version:** 1.0  
-> **Last Updated:** March 24, 2026  
+> **Version:** 1.1  
+> **Last Updated:** March 25, 2026  
 > **Base URL:** `http://160.30.113.40:8080`  
 > **Swagger UI:** `http://160.30.113.40:8080/swagger-ui.html`
 
@@ -20,6 +20,7 @@
 8. [Error Handling](#8-error-handling)
 9. [Best Practices](#9-best-practices)
 10. [Product Reviews APIs](#10-product-reviews-apis) ⭐ NEW
+11. [AI Chat Bot APIs](#11-ai-chat-bot-apis) 🤖 NEW
 
 ---
 
@@ -43,12 +44,14 @@
 | `GET /api/payment-types/**` | Public |
 | `GET /api/shipping-methods/**` | Public |
 | `GET /api/reviews/product/**` | Public |
+| **`POST /api/chat/message`** | **Public (không cần token) 🤖** |
 | `/api/cart/**` | Authenticated USER |
 | `/api/orders/**` | Authenticated USER |
 | `/api/addresses/**` | Authenticated USER |
 | `POST /api/reviews` | Authenticated USER |
 | `GET /api/reviews/my` | Authenticated USER |
 | `DELETE /api/reviews/{id}` | Authenticated USER |
+| `DELETE /api/chat/session/{id}` | Authenticated USER |
 | `POST/PUT/DELETE /api/products/**` | Authenticated + ADMIN |
 | `GET /api/orders/admin/**` | Authenticated + ADMIN |
 
@@ -2213,6 +2216,307 @@ async function loadMyReviews() {
 7. Giá hiển thị = `priceOverride != null ? priceOverride : basePrice`
 8. Mã đơn hàng format: `DH + yyyyMMdd + số thứ tự` (VD: DH20260325001)
 9. `isDefault` trong UserPaymentMethod là Integer (1 = true, 0 = false)
+10. **Chat AI**: Lưu `sessionId` từ response để duy trì ngữ cảnh hội thoại
+
+---
+
+## 11. AI CHAT BOT APIs
+
+> 🤖 **Chatbot AI gợi ý sản phẩm** — Tích hợp Claude API (Anthropic)  
+> **Không cần đăng nhập** | Session-based conversation | Tự động gợi ý sản phẩm từ DB
+
+---
+
+### 11.1. Gửi Tin Nhắn Cho Chatbot
+
+**Endpoint:** `POST /api/chat/message`  
+**Auth:** ❌ Không cần (Public) — Nếu đã đăng nhập sẽ được cá nhân hóa hơn
+
+**Request Body:**
+```json
+{
+  "message": "Tôi muốn mua áo thun màu đỏ dưới 300k",
+  "sessionId": null,
+  "productId": null
+}
+```
+
+| Field | Type | Required | Mô tả |
+|-------|------|----------|-------|
+| `message` | String | ✅ | Tin nhắn của người dùng (tối đa 1000 ký tự) |
+| `sessionId` | String (UUID) | ❌ | ID phiên hội thoại. `null` = tạo mới. Gửi lại ID cũ để AI nhớ ngữ cảnh |
+| `productId` | Integer | ❌ | ID sản phẩm đang xem — giúp AI hiểu context và gợi ý liên quan |
+
+**Response thành công (200):**
+```json
+{
+  "success": true,
+  "message": "Phan hoi thanh cong",
+  "data": {
+    "message": "Chào bạn! Tôi tìm thấy một số áo thun phù hợp với ngân sách của bạn:\n\n• Áo Thun Basic Cotton - 250,000 VND\n• Áo Thun Polo Classic - 280,000 VND\n\nCả hai đều có màu đỏ và chất liệu cotton thoáng mát. Bạn muốn biết thêm về sản phẩm nào không?",
+    "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+    "suggestions": [
+      {
+        "id": 5,
+        "name": "Áo Thun Basic Cotton",
+        "price": 250000,
+        "thumbnailUrl": "/uploads/images/ao-thun-basic.jpg",
+        "slug": "ao-thun-basic-cotton",
+        "brand": "Uniqlo",
+        "material": "Cotton 100%",
+        "categoryName": "Áo Thun"
+      },
+      {
+        "id": 8,
+        "name": "Áo Thun Polo Classic",
+        "price": 280000,
+        "thumbnailUrl": "/uploads/images/ao-polo.jpg",
+        "slug": "ao-thun-polo-classic",
+        "brand": "Lacoste",
+        "material": "Cotton Pique",
+        "categoryName": "Áo Polo"
+      }
+    ],
+    "timestamp": "2026-03-25T10:30:00Z"
+  }
+}
+```
+
+---
+
+### 11.2. Xóa Lịch Sử Chat
+
+**Endpoint:** `DELETE /api/chat/session/{sessionId}`  
+**Auth:** ✅ Bearer Token (tuỳ chọn — chủ yếu dùng khi muốn reset hội thoại)
+
+**Response thành công (200):**
+```json
+{
+  "success": true,
+  "message": "Xoa session thanh cong",
+  "data": null
+}
+```
+
+---
+
+### 11.3. Hướng Dẫn Tích Hợp Frontend
+
+#### Bước 1 — Tạo state quản lý chat
+
+```javascript
+// React hooks example
+const [messages, setMessages] = useState([]);
+const [sessionId, setSessionId] = useState(null);
+const [isLoading, setIsLoading] = useState(false);
+const [suggestions, setSuggestions] = useState([]);
+```
+
+#### Bước 2 — Hàm gửi tin nhắn
+
+```javascript
+const sendChatMessage = async (userMessage, productId = null) => {
+  setIsLoading(true);
+
+  // Thêm tin nhắn user vào UI ngay
+  setMessages(prev => [...prev, {
+    role: 'user',
+    content: userMessage,
+    timestamp: new Date()
+  }]);
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/chat/message`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Gửi token nếu đã đăng nhập (tuỳ chọn)
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      },
+      body: JSON.stringify({
+        message: userMessage,
+        sessionId: sessionId,    // null lần đầu, ID cũ các lần sau
+        productId: productId     // ID sản phẩm đang xem (nếu có)
+      })
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      const { message, sessionId: newSessionId, suggestions } = result.data;
+
+      // ⚠️ QUAN TRỌNG: Lưu sessionId cho request tiếp theo
+      setSessionId(newSessionId);
+
+      // Thêm phản hồi AI vào UI
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: message,
+        timestamp: new Date()
+      }]);
+
+      // Cập nhật gợi ý sản phẩm
+      setSuggestions(suggestions);
+    }
+  } catch (error) {
+    console.error('Chat error:', error);
+  } finally {
+    setIsLoading(false);
+  }
+};
+```
+
+#### Bước 3 — Render giao diện chat
+
+```jsx
+// Chat window component
+const ChatWindow = () => {
+  const [inputText, setInputText] = useState('');
+
+  return (
+    <div className="chat-container">
+      {/* Message history */}
+      <div className="message-list">
+        {messages.map((msg, idx) => (
+          <div key={idx} className={`message ${msg.role}`}>
+            {msg.role === 'assistant' && (
+              <img src="/bot-avatar.png" alt="AI" className="avatar" />
+            )}
+            <div className="bubble">{msg.content}</div>
+          </div>
+        ))}
+        {isLoading && <div className="typing-indicator">AI đang trả lời...</div>}
+      </div>
+
+      {/* Product suggestions */}
+      {suggestions.length > 0 && (
+        <div className="suggestions">
+          <h4>Gợi ý cho bạn:</h4>
+          <div className="product-grid">
+            {suggestions.map(product => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onView={() => sendChatMessage(
+                  `Cho tôi biết thêm về ${product.name}`,
+                  product.id
+                )}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Input */}
+      <div className="input-area">
+        <input
+          value={inputText}
+          onChange={e => setInputText(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && sendChatMessage(inputText)}
+          placeholder="Hỏi AI về sản phẩm..."
+        />
+        <button onClick={() => sendChatMessage(inputText)}>Gửi</button>
+      </div>
+    </div>
+  );
+};
+```
+
+#### Bước 4 — Tích hợp trên trang Product Detail
+
+```javascript
+// Khi user đang xem một sản phẩm cụ thể
+// Truyền productId để AI hiểu context
+const ProductDetailPage = ({ product }) => {
+
+  const handleChatWithContext = (question) => {
+    // AI sẽ nhận biết sản phẩm đang xem và tư vấn phù hợp
+    sendChatMessage(question, product.id);
+  };
+
+  return (
+    <div>
+      {/* ... product info ... */}
+      <button onClick={() => handleChatWithContext("Size này có phù hợp không?")}>
+        💬 Hỏi AI về sản phẩm này
+      </button>
+    </div>
+  );
+};
+```
+
+---
+
+### 11.4. Ví Dụ Câu Hỏi Phổ Biến
+
+| Loại câu hỏi | Ví dụ | AI sẽ làm gì |
+|-------------|-------|-------------|
+| **Tìm theo ngân sách** | "Áo thun dưới 300k" | Tìm DB → gợi ý products phù hợp |
+| **Tư vấn size** | "Tôi cao 1m70, nặng 65kg mặc size gì?" | Tư vấn size theo thông số |
+| **Phối đồ** | "Áo này phối với gì trông đẹp?" | Gợi ý cách phối (cần productId) |
+| **So sánh** | "Áo cotton và áo polyester khác gì?" | Giải thích chất liệu |
+| **Tìm theo màu** | "Có áo khoác màu xanh navy không?" | Query DB theo keyword |
+| **Tìm theo thương hiệu** | "Cho tôi xem đồ của Nike" | Filter theo brand trong DB |
+
+---
+
+### 11.5. Lưu Ý Quan Trọng
+
+> ⚠️ **sessionId là cốt lõi để duy trì ngữ cảnh** — Luôn lưu và gửi lại
+
+```javascript
+// ✅ ĐÚNG — gửi sessionId từ response trước
+{ "message": "...", "sessionId": "550e8400-..." }
+
+// ❌ SAI — gửi null → AI sẽ mất ngữ cảnh hội thoại trước đó
+{ "message": "...", "sessionId": null }
+```
+
+| Điều cần biết | Chi tiết |
+|--------------|---------|
+| **Session TTL** | 2 giờ không hoạt động → session tự xóa |
+| **Max messages/session** | 20 tin nhắn (tự động trim tin cũ) |
+| **Fallback** | Nếu không có CLAUDE_API_KEY → bot vẫn trả sản phẩm từ DB |
+| **Max suggestions** | Tối đa 5 sản phẩm mỗi response |
+| **Storage** | In-memory → restart server = mất session |
+| **Rate limit** | Không có giới hạn phía backend (phụ thuộc Claude quota) |
+
+---
+
+### 11.6. cURL Test
+
+```bash
+# Gửi tin nhắn lần đầu (không có sessionId)
+curl -X POST http://localhost:8080/api/chat/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Tôi muốn mua áo thun cotton dưới 300k",
+    "sessionId": null
+  }'
+
+# Tiếp tục hội thoại với sessionId từ response trên
+curl -X POST http://localhost:8080/api/chat/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Áo đó có size L không?",
+    "sessionId": "550e8400-e29b-41d4-a716-446655440000"
+  }'
+
+# Hỏi về sản phẩm đang xem (productId = 5)
+curl -X POST http://localhost:8080/api/chat/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message": "Áo này phối với quần gì trông đẹp?",
+    "sessionId": "550e8400-e29b-41d4-a716-446655440000",
+    "productId": 5
+  }'
+
+# Xóa session
+curl -X DELETE http://localhost:8080/api/chat/session/550e8400-e29b-41d4-a716-446655440000 \
+  -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+---
 
 ### 🐛 Common Issues
 

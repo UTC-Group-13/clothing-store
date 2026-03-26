@@ -2,7 +2,7 @@
 
 > **Backend API cho website bán quần áo trực tuyến**  
 > Spring Boot 3.5.11 | Java 21 | MySQL 8.0 | JWT Authentication  
-> **Trạng thái:** 94% hoàn thành — 86 API endpoints
+> **Trạng thái:** 96% hoàn thành — 88 API endpoints | 19 Controllers
 
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://openjdk.org/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.11-brightgreen.svg)](https://spring.io/projects/spring-boot)
@@ -85,10 +85,11 @@ mvn spring-boot:run
 ✅ Shop Bank Accounts (6 APIs)      [██████████] 100%
 ✅ File Upload (3 APIs)             [██████████] 100%
 ✅ Sample Data (1 API)              [██████████] 100%
+✅ Reviews (5 APIs)                 [██████████] 100%
+✅ AI Chat Bot (2 APIs)             [██████████] 100%  ✨ NEW
 ⚠️ Promotion (0 APIs)              [░░░░░░░░░░]   0%  (Entity có, chưa API)
-⚠️ Reviews (5 APIs)                [██████████] 100%
 
-Overall: 86 APIs · 16/17 modules   [█████████░]  94%
+Overall: 88 APIs · 19/20 modules   [█████████░]  96%
 ```
 
 > **Chi tiết:** [PROJECT_SUMMARY.md](PROJECT_SUMMARY.md) · [DATABASE_ANALYSIS.md](DATABASE_ANALYSIS.md)
@@ -101,8 +102,9 @@ Overall: 86 APIs · 16/17 modules   [█████████░]  94%
 |-------|----------|--------|
 | **Phase 1** ✅ | Product Catalog, Auth, Categories, Colors, Sizes | Done |
 | **Phase 2** ✅ | Cart, Orders, Addresses, Payments, Shipping, File Upload | Done |
-| **Phase 3** 🔄 | Reviews System ✅, Promotion System | In Progress |
-| **Phase 4** 📅 | Payment Gateway Webhooks, Email Notifications, Analytics | Todo |
+| **Phase 3** ✅ | Reviews System, AI Chatbot (Claude API) | Done |
+| **Phase 4** 🔄 | Promotion System | In Progress |
+| **Phase 5** 📅 | Payment Gateway Webhooks, Email Notifications, Analytics | Todo |
 
 ---
 
@@ -136,6 +138,19 @@ Product (tên, giá gốc, brand, material)
 - Payment Types · Shipping Methods · Order Statuses · Shop Bank Accounts
 - File Upload · Sample Data · Swagger UI · Exception Handler (i18n) · CORS
 
+### 🤖 AI Shopping Chatbot ✨ NEW
+- **Endpoint:** `POST /api/chat/message` — **Không cần đăng nhập**
+- Tích hợp **Claude API** (Anthropic) — `claude-3-haiku-20240307`
+- Tự động tìm sản phẩm liên quan từ DB làm context cho AI
+- Trả về phản hồi tự nhiên + **top 5 sản phẩm gợi ý** kèm ảnh, giá
+- Session management in-memory (tối đa 20 tin nhắn, TTL 2h)
+- **Fallback thông minh** khi không có API key — vẫn trả sản phẩm từ DB
+- Cấu hình: `CLAUDE_API_KEY=sk-ant-...` (biến môi trường)
+
+### ⭐ Product Reviews
+- Chống fake review: chỉ đánh giá được sau khi đơn hàng hoàn thành
+- Rating 1-5 sao + comment · Thống kê đánh giá theo sản phẩm
+
 ---
 
 ## 🏗️ TECH STACK
@@ -149,6 +164,7 @@ Product (tên, giá gốc, brand, material)
 | **Validation** | Jakarta Bean Validation |
 | **Mapping** | MapStruct 1.6.3 · Lombok |
 | **API Docs** | SpringDoc OpenAPI 2.8.5 |
+| **AI Integration** | Claude API (Anthropic) — `claude-3-haiku-20240307` |
 | **Build** | Maven |
 | **DevOps** | Docker + Docker Compose · Spring Boot Actuator |
 
@@ -159,6 +175,7 @@ Product (tên, giá gốc, brand, material)
 ### Public (không cần token)
 ```
 POST   /api/auth/register · /login             Auth
+POST   /api/chat/message                       AI Chatbot (gợi ý sản phẩm) ✨
 GET    /api/products/search?name&categoryIds&…  Tìm kiếm nâng cao
 GET    /api/products/slug/{slug}               Chi tiết (SEO)
 GET    /api/categories/roots                   Danh mục gốc
@@ -230,6 +247,7 @@ SPRING_DATASOURCE_PASSWORD=123456
 JWT_SECRET=3cfa76ef14937c1c0ea519f8fc057a80fcd04a7420f8e8bcd0a7567c272e007b
 JWT_EXPIRATION=86400000                # 24 giờ
 FILE_UPLOAD_DIR=C:\CODE\uploads\images
+CLAUDE_API_KEY=sk-ant-api03-...        # Lấy tại https://console.anthropic.com (tuỳ chọn)
 ```
 
 > **Chi tiết:** `ec/src/main/resources/application.yml`
@@ -335,10 +353,11 @@ POST /api/orders
 ## 📝 CHANGELOG
 
 ### v0.0.1-SNAPSHOT (March 25, 2026)
-- ✅ 18 Controllers · 86 APIs · 21 Database Tables
+- ✅ 19 Controllers · 88 APIs · 21 Database Tables
 - ✅ Auth (JWT + BCrypt) · Product Catalog 3 tầng (45 APIs)
 - ✅ Cart (5) · Orders (7) · Addresses (5) · Payments (10) · Config (24 APIs)
 - ✅ Reviews (5 APIs) — chống fake review qua FK tới order_line
+- ✅ **AI Chatbot (2 APIs)** — Claude API + in-memory session + product context từ DB ✨
 - ✅ File Upload · Sample Data · VietQR · Swagger · i18n · CORS · Docker
 - ✅ 7 documentation files
 - ⚠️ Todo: Promotion · Payment Webhooks · Email

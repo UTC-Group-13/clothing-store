@@ -37,6 +37,7 @@ public class SecurityConfig {
     private static final String[] PUBLIC_URLS = {
             "/api/auth/**",
             "/api/sample-data/**",
+            "/api/chat/message",           // Chatbot - khong can dang nhap
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
