@@ -45,12 +45,4 @@ public class ShopOrder {
 
     @Column(name = "order_status")
     private Integer orderStatus;
-
-    /** ID khuyến mãi đã áp dụng (nullable) */
-    @Column(name = "promotion_id")
-    private Integer promotionId;
-
-    /** Số tiền giảm giá thực tế */
-    @Column(name = "discount_amount")
-    private Integer discountAmount;
 }
