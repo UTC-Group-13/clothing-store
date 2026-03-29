@@ -1,8 +1,8 @@
 # 📘 HƯỚNG DẪN TÍCH HỢP API - CLOTHING STORE
 ## Dành cho Frontend Developer
 
-> **Version:** 1.1  
-> **Last Updated:** March 25, 2026  
+> **Version:** 1.2  
+> **Last Updated:** March 29, 2026  
 > **Base URL:** `http://160.30.113.40:8080`  
 > **Swagger UI:** `http://160.30.113.40:8080/swagger-ui.html`
 
@@ -21,6 +21,7 @@
 9. [Best Practices](#9-best-practices)
 10. [Product Reviews APIs](#10-product-reviews-apis) ⭐ NEW
 11. [AI Chat Bot APIs](#11-ai-chat-bot-apis) 🤖 NEW
+12. [Product Management APIs (Admin)](#12-product-management-apis-admin) 🛠️ NEW
 
 ---
 
@@ -53,6 +54,9 @@
 | `DELETE /api/reviews/{id}` | Authenticated USER |
 | `DELETE /api/chat/session/{id}` | Authenticated USER |
 | `POST/PUT/DELETE /api/products/**` | Authenticated + ADMIN |
+| `POST /api/products/full` | Authenticated + ADMIN |
+| `PUT /api/products/full/{id}` | Authenticated + ADMIN |
+| `GET /api/products/full/{id}` | Public |
 | `GET /api/orders/admin/**` | Authenticated + ADMIN |
 
 ### 📦 Cấu Trúc Response Chuẩn
@@ -2534,6 +2538,576 @@ curl -X DELETE http://localhost:8080/api/chat/session/550e8400-e29b-41d4-a716-44
 **Issue 4: Không thêm được vào giỏ**
 - Kiểm tra `qtyInStock` > 0
 - Kiểm tra user đã đăng nhập chưa
+
+---
+
+## 12. PRODUCT MANAGEMENT APIs (ADMIN) 🛠️ NEW
+
+> **Dành cho trang Admin** — Tạo mới và chỉnh sửa sản phẩm đầy đủ (Product + Variants + Stocks) trong **1 request duy nhất**.  
+> Yêu cầu **đăng nhập với tài khoản ADMIN** (role = `ADMIN`).
+
+---
+
+### Tổng Quan Endpoints
+
+| Method | Endpoint | Auth | Mô tả |
+|--------|----------|------|-------|
+| `POST` | `/api/products/full` | ✅ ADMIN | Tạo sản phẩm đầy đủ |
+| `PUT` | `/api/products/full/{id}` | ✅ ADMIN | Cập nhật sản phẩm đầy đủ |
+| `GET` | `/api/products/full/{id}` | ❌ Public | Lấy chi tiết đầy đủ sản phẩm |
+
+---
+
+### 🏗️ Cấu Trúc Dữ Liệu 3 Tầng
+
+```
+Product (sản phẩm gốc)
+  └─ variants[] — Biến thể theo màu sắc
+        └─ stocks[]  — Tồn kho theo size (có SKU + số lượng + giá override)
+```
+
+**Ví dụ thực tế:**
+```
+Áo Thun Nike (Product)
+  ├─ Màu Đỏ (variant, colorId=2, isDefault=true)
+  │    ├─ Size S (stock, sizeId=1, qty=50, sku="NIKE-DO-S")
+  │    └─ Size M (stock, sizeId=2, qty=30, sku="NIKE-DO-M")
+  └─ Màu Xanh (variant, colorId=3)
+       └─ Size M (stock, sizeId=2, qty=20, sku="NIKE-XANH-M", priceOverride=280000)
+```
+
+---
+
+### ➕ 12.1. Tạo Sản Phẩm Đầy Đủ
+
+**Endpoint:** `POST /api/products/full`  
+**Auth Required:** ✅ Yes (ADMIN)
+
+#### Request Body
+
+```json
+{
+  "name": "Áo Thun Nike Basic",
+  "slug": "ao-thun-nike-basic",
+  "description": "Áo thun cotton 100%, thoáng mát, phù hợp mọi lứa tuổi",
+  "categoryId": 1,
+  "basePrice": 250000,
+  "brand": "Nike",
+  "material": "Cotton 100%",
+  "isActive": true,
+  "variants": [
+    {
+      "id": null,
+      "colorId": 2,
+      "colorImageUrl": "/uploads/images/ao-nike-do.jpg",
+      "images": "[\"/uploads/images/nike-do-1.jpg\",\"/uploads/images/nike-do-2.jpg\"]",
+      "isDefault": true,
+      "stocks": [
+        {
+          "id": null,
+          "sizeId": 1,
+          "stockQty": 50,
+          "priceOverride": null,
+          "sku": "NIKE-DO-S"
+        },
+        {
+          "id": null,
+          "sizeId": 2,
+          "stockQty": 30,
+          "priceOverride": null,
+          "sku": "NIKE-DO-M"
+        },
+        {
+          "id": null,
+          "sizeId": 3,
+          "stockQty": 20,
+          "priceOverride": null,
+          "sku": "NIKE-DO-L"
+        }
+      ]
+    },
+    {
+      "id": null,
+      "colorId": 3,
+      "colorImageUrl": "/uploads/images/ao-nike-xanh.jpg",
+      "images": null,
+      "isDefault": false,
+      "stocks": [
+        {
+          "id": null,
+          "sizeId": 2,
+          "stockQty": 20,
+          "priceOverride": 280000,
+          "sku": "NIKE-XANH-M"
+        }
+      ]
+    }
+  ]
+}
+```
+
+#### Request Fields — Product
+
+| Field | Type | Required | Validation |
+|-------|------|----------|-----------|
+| `name` | String | ✅ | Max 200 ký tự |
+| `slug` | String | ✅ | Max 200 ký tự, **phải duy nhất** toàn hệ thống |
+| `description` | String | ❌ | Không giới hạn |
+| `categoryId` | Integer | ✅ | Phải là ID danh mục tồn tại |
+| `basePrice` | Decimal | ✅ | >= 0 (VNĐ) |
+| `brand` | String | ❌ | Max 100 ký tự |
+| `material` | String | ❌ | Max 100 ký tự |
+| `isActive` | Boolean | ❌ | Default: `true` |
+
+#### Request Fields — Variant (mỗi phần tử trong `variants[]`)
+
+| Field | Type | Required | Mô tả |
+|-------|------|----------|-------|
+| `id` | Integer | ❌ | `null` = **tạo mới** khi POST |
+| `colorId` | Integer | ✅ | Phải là ID màu sắc tồn tại |
+| `colorImageUrl` | String | ❌ | URL ảnh thumbnail đại diện cho màu |
+| `images` | String | ❌ | JSON array string: `"[\"/url1.jpg\",\"/url2.jpg\"]"` |
+| `isDefault` | Boolean | ❌ | Màu mặc định (chỉ **1 variant được `true`**) |
+
+#### Request Fields — Stock (mỗi phần tử trong `stocks[]`)
+
+| Field | Type | Required | Mô tả |
+|-------|------|----------|-------|
+| `id` | Integer | ❌ | `null` = **tạo mới** khi POST |
+| `sizeId` | Integer | ✅ | Phải là ID size tồn tại |
+| `stockQty` | Integer | ❌ | >= 0, default: 0 |
+| `priceOverride` | Decimal | ❌ | Ghi đè giá cho size này (`null` = dùng `basePrice`) |
+| `sku` | String | ✅ | Max 100 ký tự, **phải duy nhất** toàn hệ thống |
+
+#### Response (201 Created)
+
+```json
+{
+  "success": true,
+  "message": "Tao san pham thanh cong.",
+  "data": {
+    "id": 10,
+    "name": "Áo Thun Nike Basic",
+    "slug": "ao-thun-nike-basic",
+    "description": "Áo thun cotton 100%, thoáng mát, phù hợp mọi lứa tuổi",
+    "categoryId": 1,
+    "categoryName": "Áo Thun",
+    "basePrice": 250000,
+    "brand": "Nike",
+    "material": "Cotton 100%",
+    "isActive": true,
+    "createdAt": "2026-03-29 10:00:00",
+    "updatedAt": "2026-03-29 10:00:00",
+    "variants": [
+      {
+        "id": 15,
+        "colorId": 2,
+        "colorName": "Đỏ",
+        "colorHexCode": "#FF0000",
+        "colorSlug": "do",
+        "colorImageUrl": "/uploads/images/ao-nike-do.jpg",
+        "images": "[\"/uploads/images/nike-do-1.jpg\",\"/uploads/images/nike-do-2.jpg\"]",
+        "isDefault": true,
+        "stocks": [
+          {
+            "id": 30,
+            "sizeId": 1,
+            "sizeLabel": "S",
+            "sizeType": "clothing",
+            "stockQty": 50,
+            "priceOverride": null,
+            "effectivePrice": 250000,
+            "sku": "NIKE-DO-S"
+          },
+          {
+            "id": 31,
+            "sizeId": 2,
+            "sizeLabel": "M",
+            "sizeType": "clothing",
+            "stockQty": 30,
+            "priceOverride": null,
+            "effectivePrice": 250000,
+            "sku": "NIKE-DO-M"
+          },
+          {
+            "id": 32,
+            "sizeId": 3,
+            "sizeLabel": "L",
+            "sizeType": "clothing",
+            "stockQty": 20,
+            "priceOverride": null,
+            "effectivePrice": 250000,
+            "sku": "NIKE-DO-L"
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "colorId": 3,
+        "colorName": "Xanh",
+        "colorHexCode": "#0000FF",
+        "colorSlug": "xanh",
+        "colorImageUrl": "/uploads/images/ao-nike-xanh.jpg",
+        "images": null,
+        "isDefault": false,
+        "stocks": [
+          {
+            "id": 33,
+            "sizeId": 2,
+            "sizeLabel": "M",
+            "sizeType": "clothing",
+            "stockQty": 20,
+            "priceOverride": 280000,
+            "effectivePrice": 280000,
+            "sku": "NIKE-XANH-M"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+#### Lỗi Thường Gặp
+
+| HTTP | Message | Nguyên nhân |
+|------|---------|-------------|
+| 400 | `Slug san pham da ton tai: {slug}` | `slug` đã tồn tại trong DB |
+| 400 | `Chi duoc dat 1 bien the lam mac dinh` | Có > 1 variant có `isDefault = true` |
+| 400 | `Ma SKU da ton tai: {sku}` | `sku` đã tồn tại trong DB |
+| 404 | `Khong tim thay danh muc voi ID: {id}` | `categoryId` không tồn tại |
+| 404 | `Khong tim thay mau sac voi ID: {id}` | `colorId` không tồn tại |
+| 404 | `Khong tim thay size voi ID: {id}` | `sizeId` không tồn tại |
+| 403 | `Forbidden` | Tài khoản không phải ADMIN |
+
+---
+
+### ✏️ 12.2. Cập Nhật Sản Phẩm Đầy Đủ
+
+**Endpoint:** `PUT /api/products/full/{id}`  
+**Auth Required:** ✅ Yes (ADMIN)
+
+**Example:** `PUT /api/products/full/10`
+
+#### Quy Tắc Cập Nhật (QUAN TRỌNG)
+
+| `id` trong variant/stock | Hành động |
+|--------------------------|-----------|
+| `id = null` | **Tạo mới** bản ghi |
+| `id = <số>` | **Cập nhật** bản ghi đã tồn tại |
+| Không xuất hiện trong request | **Giữ nguyên** (không bị xóa) |
+
+> ⚠️ **Để xóa variant hoặc stock**, dùng endpoint riêng:
+> - `DELETE /api/product-variants/{variantId}`
+> - `DELETE /api/variant-stocks/{stockId}`
+
+#### Ví Dụ: Cập Nhật Giá + Thêm Size Mới + Thêm Màu Mới
+
+```json
+{
+  "name": "Áo Thun Nike Basic (Updated)",
+  "slug": "ao-thun-nike-basic",
+  "basePrice": 260000,
+  "categoryId": 1,
+  "variants": [
+    {
+      "id": 15,
+      "colorId": 2,
+      "stocks": [
+        {
+          "id": 30,
+          "sizeId": 1,
+          "stockQty": 45,
+          "sku": "NIKE-DO-S"
+        },
+        {
+          "id": null,
+          "sizeId": 4,
+          "stockQty": 10,
+          "priceOverride": null,
+          "sku": "NIKE-DO-XL"
+        }
+      ]
+    },
+    {
+      "id": null,
+      "colorId": 5,
+      "colorImageUrl": "/uploads/images/ao-nike-den.jpg",
+      "isDefault": false,
+      "stocks": [
+        {
+          "id": null,
+          "sizeId": 2,
+          "stockQty": 15,
+          "sku": "NIKE-DEN-M"
+        }
+      ]
+    }
+  ]
+}
+```
+
+> **Giải thích request trên:**
+> - `variant id=15` (Màu Đỏ) → **cập nhật** colorId nếu đổi, giữ nguyên isDefault
+>   - `stock id=30` (Size S) → **cập nhật** stockQty từ 50 → 45
+>   - `stock id=null` (Size XL) → **tạo mới** stock cho Size XL
+> - `variant id=null` (Màu Đen) → **tạo mới** variant màu đen
+>   - `stock id=null` (Size M) → **tạo mới** stock
+> - `variant id=16` (Màu Xanh) không xuất hiện → **giữ nguyên** (không bị xóa)
+
+#### Response (200 OK)
+
+Trả về toàn bộ sản phẩm sau khi cập nhật — giống response của POST `/api/products/full`.
+
+---
+
+### 🔍 12.3. Lấy Chi Tiết Đầy Đủ Sản Phẩm
+
+**Endpoint:** `GET /api/products/full/{id}`  
+**Auth Required:** ❌ No (Public)
+
+**Example:** `GET /api/products/full/10`
+
+**Response (200 OK):** Giống response của POST `/api/products/full` — trả về đầy đủ Product + Variants + Stocks.
+
+> 💡 **Khi nào dùng endpoint này vs `/api/products/{id}`?**
+> - `/api/products/{id}` → Trang danh sách / card sản phẩm (chỉ cần info cơ bản + thumbnailUrl)
+> - `/api/products/full/{id}` → **Trang admin chỉnh sửa sản phẩm** hoặc trang chi tiết cần đủ biến thể + stock
+
+---
+
+### 💻 12.4. Frontend Implementation — Admin Product Form
+
+#### Bước 1 — Load dữ liệu phụ trợ
+
+```javascript
+// Trước khi render form tạo/sửa sản phẩm, load danh sách options
+async function loadFormData() {
+  const [categoriesRes, colorsRes, sizesRes] = await Promise.all([
+    api.get('/categories'),
+    api.get('/colors'),
+    api.get('/sizes')
+  ]);
+  return {
+    categories: categoriesRes.data,
+    colors: colorsRes.data,
+    sizes: sizesRes.data
+  };
+}
+```
+
+#### Bước 2 — Load sản phẩm để chỉnh sửa (Edit mode)
+
+```javascript
+// Chế độ chỉnh sửa: load full product detail
+async function loadProductForEdit(productId) {
+  const response = await api.get(`/products/full/${productId}`);
+  return response.data;
+  // response.data.variants[] → render danh sách màu
+  // response.data.variants[i].stocks[] → render danh sách size/SKU
+}
+```
+
+#### Bước 3 — Submit form tạo mới
+
+```javascript
+async function createProduct(formData) {
+  // Build request body từ form state
+  const request = {
+    name: formData.name,
+    slug: formData.slug,              // Có thể tự sinh từ name
+    description: formData.description,
+    categoryId: formData.categoryId,
+    basePrice: formData.basePrice,
+    brand: formData.brand,
+    material: formData.material,
+    isActive: formData.isActive ?? true,
+    variants: formData.variants.map(v => ({
+      id: null,                        // Luôn null khi tạo mới
+      colorId: v.colorId,
+      colorImageUrl: v.colorImageUrl,
+      images: v.imageUrls ? JSON.stringify(v.imageUrls) : null,
+      isDefault: v.isDefault,
+      stocks: v.stocks.map(s => ({
+        id: null,                      // Luôn null khi tạo mới
+        sizeId: s.sizeId,
+        stockQty: s.stockQty ?? 0,
+        priceOverride: s.priceOverride || null,
+        sku: s.sku
+      }))
+    }))
+  };
+
+  try {
+    const response = await api.post('/products/full', request);
+    alert('Tạo sản phẩm thành công!');
+    return response.data;
+  } catch (error) {
+    const msg = error.response?.data?.message;
+    if (msg?.includes('Slug')) alert('Slug đã tồn tại, vui lòng chọn slug khác');
+    else if (msg?.includes('SKU')) alert('SKU đã tồn tại: ' + msg);
+    else alert(msg || 'Lỗi khi tạo sản phẩm');
+  }
+}
+```
+
+#### Bước 4 — Submit form cập nhật
+
+```javascript
+async function updateProduct(productId, formData) {
+  // Đối với update: giữ nguyên id của các item đã có
+  // item.id = null → sẽ được tạo mới
+  // item.id = <số> → sẽ được cập nhật
+  const request = {
+    name: formData.name,
+    slug: formData.slug,
+    description: formData.description,
+    categoryId: formData.categoryId,
+    basePrice: formData.basePrice,
+    brand: formData.brand,
+    material: formData.material,
+    isActive: formData.isActive,
+    variants: formData.variants.map(v => ({
+      id: v.id ?? null,               // Nếu là variant mới → null
+      colorId: v.colorId,
+      colorImageUrl: v.colorImageUrl,
+      images: Array.isArray(v.imageUrls)
+        ? JSON.stringify(v.imageUrls)
+        : v.images,
+      isDefault: v.isDefault,
+      stocks: v.stocks.map(s => ({
+        id: s.id ?? null,             // Nếu là stock mới → null
+        sizeId: s.sizeId,
+        stockQty: s.stockQty,
+        priceOverride: s.priceOverride || null,
+        sku: s.sku
+      }))
+    }))
+  };
+
+  try {
+    const response = await api.put(`/products/full/${productId}`, request);
+    alert('Cập nhật thành công!');
+    return response.data;
+  } catch (error) {
+    alert(error.response?.data?.message || 'Lỗi khi cập nhật sản phẩm');
+  }
+}
+```
+
+#### Bước 5 — Xóa variant / stock
+
+```javascript
+// Xóa một màu sắc (variant) khỏi sản phẩm
+async function deleteVariant(variantId) {
+  if (!confirm('Xóa màu này? Tất cả tồn kho theo size cũng bị xóa.')) return;
+  try {
+    await api.delete(`/product-variants/${variantId}`);
+    // Reload product data
+  } catch (error) {
+    alert(error.response?.data?.message || 'Không thể xóa variant');
+  }
+}
+
+// Xóa một dòng tồn kho (size)
+async function deleteStock(stockId) {
+  if (!confirm('Xóa size này?')) return;
+  try {
+    await api.delete(`/variant-stocks/${stockId}`);
+    // Reload product data
+  } catch (error) {
+    alert(error.response?.data?.message || 'Không thể xóa stock');
+  }
+}
+```
+
+#### Tiện ích — Tự động sinh slug từ tên sản phẩm
+
+```javascript
+function generateSlug(name) {
+  const map = {
+    'à':'a','á':'a','ả':'a','ã':'a','ạ':'a',
+    'ă':'a','ằ':'a','ắ':'a','ẳ':'a','ẵ':'a','ặ':'a',
+    'â':'a','ầ':'a','ấ':'a','ẩ':'a','ẫ':'a','ậ':'a',
+    'đ':'d',
+    'è':'e','é':'e','ẻ':'e','ẽ':'e','ẹ':'e',
+    'ê':'e','ề':'e','ế':'e','ể':'e','ễ':'e','ệ':'e',
+    'ì':'i','í':'i','ỉ':'i','ĩ':'i','ị':'i',
+    'ò':'o','ó':'o','ỏ':'o','õ':'o','ọ':'o',
+    'ô':'o','ồ':'o','ố':'o','ổ':'o','ỗ':'o','ộ':'o',
+    'ơ':'o','ờ':'o','ớ':'o','ở':'o','ỡ':'o','ợ':'o',
+    'ù':'u','ú':'u','ủ':'u','ũ':'u','ụ':'u',
+    'ư':'u','ừ':'u','ứ':'u','ử':'u','ữ':'u','ự':'u',
+    'ỳ':'y','ý':'y','ỷ':'y','ỹ':'y','ỵ':'y'
+  };
+  return name
+    .toLowerCase()
+    .split('')
+    .map(c => map[c] || c)
+    .join('')
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-');
+}
+
+// Ví dụ: generateSlug("Áo Thun Nike Basic") → "ao-thun-nike-basic"
+```
+
+---
+
+### 📋 12.5. Luồng Tạo Sản Phẩm Hoàn Chỉnh (Admin)
+
+```
+1. Upload ảnh thumbnail + gallery
+   POST /api/files/image  (1 ảnh)       → lấy colorImageUrl
+   POST /api/files/images (nhiều ảnh)   → lấy images JSON array
+
+2. Load danh sách phụ trợ
+   GET /api/categories   → categoryId options
+   GET /api/colors       → colorId options
+   GET /api/sizes        → sizeId options
+
+3. Admin điền form và submit
+   POST /api/products/full
+   → Tạo Product + Variants + Stocks trong 1 request
+
+4. Redirect về trang chi tiết sản phẩm
+   GET /api/products/full/{newProductId}
+```
+
+---
+
+### 🔑 12.6. Field `effectivePrice` trong Response
+
+Mỗi `stock` trong response có field `effectivePrice` — giá thực tế áp dụng cho size đó:
+
+```
+effectivePrice = priceOverride != null ? priceOverride : product.basePrice
+```
+
+| priceOverride | basePrice | effectivePrice |
+|---------------|-----------|----------------|
+| `null` | 250,000 | 250,000 |
+| 280,000 | 250,000 | **280,000** |
+| 0 | 250,000 | **0** (miễn phí!) |
+
+> 💡 FE nên hiển thị `effectivePrice` (đã được tính sẵn từ BE), không cần tự tính lại.
+
+---
+
+### 📤 12.7. Xử Lý Field `images` (JSON String)
+
+`images` trong variant là **chuỗi JSON**, không phải mảng trực tiếp:
+
+```javascript
+// Parse khi hiển thị
+const imageUrls = variant.images ? JSON.parse(variant.images) : [];
+// → ["/uploads/images/img1.jpg", "/uploads/images/img2.jpg"]
+
+// Stringify khi gửi lên
+const imagesJson = JSON.stringify(uploadedUrls);
+// → "["/uploads/images/img1.jpg","/uploads/images/img2.jpg"]"
+```
 
 ---
 

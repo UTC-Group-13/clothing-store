@@ -180,15 +180,18 @@ jobs:
           port: 22
           script: |
             # Wait for container to be healthy
+            # Dockerfile has start_period=60s, so first check happens at t=60s
+            # Allow up to 150s (30 x 5s) for the container to become healthy
             for i in {1..30}; do
-              if docker inspect --format='{{.State.Health.Status}}' clothing-store-api 2>/dev/null | grep -q "healthy"; then
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' clothing-store-api 2>/dev/null || echo "unknown")
+              if [ "$STATUS" = "healthy" ]; then
                 echo "Container is healthy!"
                 exit 0
               fi
-              echo "Waiting for container to be healthy... ($i/30)"
-              sleep 2
+              echo "Waiting for container to be healthy... ($i/30) [status: $STATUS]"
+              sleep 5
             done
             echo "Container failed to become healthy"
-            docker logs clothing-store-api --tail 50
+            docker logs clothing-store-api --tail 100
             exit 1
 
