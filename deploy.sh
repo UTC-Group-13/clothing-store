@@ -79,7 +79,7 @@ ssh -p ${SERVER_PORT} ${SERVER_USER}@${SERVER_HOST} << 'ENDSSH'
         --name clothing-store-api \
         --restart unless-stopped \
         -p 8080:8080 \
-        -e SPRING_DATASOURCE_URL="jdbc:mysql://160.30.113.40:3307/ecommerce?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" \
+        -e SPRING_DATASOURCE_URL="jdbc:mysql://160.30.113.40:3307/clothing_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" \
         -e SPRING_DATASOURCE_USERNAME="root" \
         -e SPRING_DATASOURCE_PASSWORD="123456" \
         -e JWT_SECRET="3cfa76ef14937c1c0ea519f8fc057a80fcd04a7420f8e8bcd0a7567c272e007b" \
@@ -114,4 +114,3 @@ echo ""
 echo "Application URL: http://${SERVER_HOST}:8080"
 echo "Swagger UI: http://${SERVER_HOST}:8080/swagger-ui.html"
 echo "Health Check: http://${SERVER_HOST}:8080/actuator/health"
-

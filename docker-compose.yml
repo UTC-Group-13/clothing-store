@@ -9,7 +9,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-123456}
       MYSQL_DATABASE: clothing_db
-      MYSQL_USER: ${DB_USERNAME:-root}
+      MYSQL_USER: ${DB_USERNAME:-appuser}
       MYSQL_PASSWORD: ${DB_PASSWORD:-123456}
     ports:
       - "3307:3306"
@@ -19,9 +19,11 @@ services:
     networks:
       - clothing-store-network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
-      retries: 10
+      test: ["CMD", "mysql", "-h", "localhost", "-uroot", "-p${DB_PASSWORD:-123456}", "clothing_db", "-e", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
 
   # Spring Boot Application
   app:
@@ -48,11 +50,11 @@ services:
     networks:
       - clothing-store-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health/liveness"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 60s
+      retries: 5
+      start_period: 120s
 
 volumes:
   mysql_data:
@@ -65,4 +67,3 @@ volumes:
 networks:
   clothing-store-network:
     driver: bridge
-

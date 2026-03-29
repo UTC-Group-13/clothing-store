@@ -34,20 +34,29 @@ public class OrderStatusServiceImpl implements OrderStatusService {
 
     /**
      * Tu dong tao cac trang thai don hang mac dinh neu chua ton tai.
+     * Boc trong try/catch de app khong crash neu DB chua san sang luc startup.
      */
     @PostConstruct
     public void initDefaultStatuses() {
-        List<String> defaults = Arrays.asList(
-                STATUS_PENDING, STATUS_PROCESSING, STATUS_SHIPPED,
-                STATUS_DELIVERED, STATUS_CANCELLED);
+        try {
+            List<String> defaults = Arrays.asList(
+                    STATUS_PENDING, STATUS_PROCESSING, STATUS_SHIPPED,
+                    STATUS_DELIVERED, STATUS_CANCELLED);
 
-        for (String statusName : defaults) {
-            if (!repository.existsByStatus(statusName)) {
-                OrderStatus s = new OrderStatus();
-                s.setStatus(statusName);
-                repository.save(s);
-                log.info("Da tao trang thai don hang mac dinh: {}", statusName);
+            for (String statusName : defaults) {
+                if (!repository.existsByStatus(statusName)) {
+                    OrderStatus s = new OrderStatus();
+                    s.setStatus(statusName);
+                    repository.save(s);
+                    log.info("[OrderStatus] Da tao trang thai mac dinh: {}", statusName);
+                }
             }
+            log.info("[OrderStatus] Khoi tao trang thai don hang hoan tat.");
+        } catch (Exception e) {
+            // Khong crash app neu DB chua san sang luc startup.
+            // App van khoi dong binh thuong, cac trang thai se duoc tao sau.
+            log.warn("[OrderStatus] Khong the khoi tao trang thai mac dinh luc startup " +
+                     "(DB chua san sang?). App van tiep tuc khoi dong. Loi: {}", e.getMessage());
         }
     }
 

@@ -134,23 +134,26 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           password: ${{ secrets.SERVER_PASS }}
           port: 22
-          envs: IMAGE_NAME,GITHUB_TOKEN,GITHUB_ACTOR,DOCKER_REGISTRY,DB_URL,DB_USERNAME,DB_PASSWORD,JWT_SECRET,JWT_EXPIRATION
+          # Tang timeout len 10 phut de du cho container khoi dong
+          command_timeout: 600s
           script: |
-            # Set variables
             IMAGE_NAME="ghcr.io/${{ steps.vars.outputs.owner }}/clothing-store-api:latest"
             CONTAINER_NAME="clothing-store-api"
-            
-            # Login to GitHub Container Registry
+
+            echo "=== [1/4] Login to GHCR ==="
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            
-            # Pull latest image
+
+            echo "=== [2/4] Pull latest image ==="
             docker pull $IMAGE_NAME
-            
-            # Stop and remove old container if exists
-            docker stop $CONTAINER_NAME || true
-            docker rm $CONTAINER_NAME || true
-            
-            # Run new container
+
+            echo "=== [3/4] Stop & remove old container ==="
+            docker stop $CONTAINER_NAME 2>/dev/null || true
+            docker rm   $CONTAINER_NAME 2>/dev/null || true
+
+            echo "=== [4/4] Start new container ==="
+            mkdir -p /home/clothing-store/uploads/images
+            mkdir -p /home/clothing-store/logs
+
             docker run -d \
               --name $CONTAINER_NAME \
               --restart unless-stopped \
@@ -164,34 +167,33 @@ jobs:
               -v /home/clothing-store/uploads:/app/uploads \
               -v /home/clothing-store/logs:/app/logs \
               $IMAGE_NAME
-            
-            # Clean up old images
-            docker image prune -af --filter "until=24h"
-            
-            # Show running containers
-            docker ps | grep $CONTAINER_NAME
 
-      - name: Verify deployment
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          password: ${{ secrets.SERVER_PASS }}
-          port: 22
-          script: |
-            # Wait for container to be healthy
-            # Dockerfile has start_period=60s, so first check happens at t=60s
-            # Allow up to 150s (30 x 5s) for the container to become healthy
-            for i in {1..30}; do
-              STATUS=$(docker inspect --format='{{.State.Health.Status}}' clothing-store-api 2>/dev/null || echo "unknown")
-              if [ "$STATUS" = "healthy" ]; then
-                echo "Container is healthy!"
-                exit 0
-              fi
+            echo "=== Wait for healthy (max 300s) ==="
+            for i in $(seq 1 30); do
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' $CONTAINER_NAME 2>/dev/null || echo "error")
               echo "Waiting for container to be healthy... ($i/30) [status: $STATUS]"
-              sleep 5
-            done
-            echo "Container failed to become healthy"
-            docker logs clothing-store-api --tail 100
-            exit 1
 
+              if [ "$STATUS" = "healthy" ]; then
+                echo "✅ Container is healthy!"
+                break
+              fi
+
+              # Phat hien unhealthy som → in log va dung ngay
+              if [ "$STATUS" = "unhealthy" ]; then
+                echo "❌ Container unhealthy! Last 80 lines:"
+                docker logs --tail 80 $CONTAINER_NAME
+                exit 1
+              fi
+
+              if [ "$i" -eq 30 ]; then
+                echo "❌ Timeout. Container logs:"
+                docker logs --tail 80 $CONTAINER_NAME
+                exit 1
+              fi
+
+              sleep 10
+            done
+
+            docker image prune -af --filter "until=24h"
+            echo "✅ Deployment successful!"
+            docker ps | grep $CONTAINER_NAME
