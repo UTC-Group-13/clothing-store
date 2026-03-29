@@ -96,6 +96,12 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Spring Mail (SMTP Gmail) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- MapStruct for entity-DTO mapping -->
         <dependency>
             <groupId>org.mapstruct</groupId>

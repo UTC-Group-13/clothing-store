@@ -5,6 +5,7 @@ import com.utc.ec.entity.*;
 import com.utc.ec.exception.BusinessException;
 import com.utc.ec.exception.ResourceNotFoundException;
 import com.utc.ec.repository.*;
+import com.utc.ec.service.EmailService;
 import com.utc.ec.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -40,6 +41,7 @@ public class OrderServiceImpl implements OrderService {
     private final ColorRepository           colorRepository;
     private final SizeRepository            sizeRepository;
     private final SiteUserRepository        userRepository;
+    private final EmailService              emailService;
 
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyyMMdd");
     private static final String VIETQR_TEMPLATE = "https://img.vietqr.io/image/%s-%s-compact2.png?amount=%d&addInfo=%s&accountName=%s";
@@ -140,7 +142,19 @@ public class OrderServiceImpl implements OrderService {
         // 10. Làm trống giỏ hàng
         cartItemRepository.deleteByCartId(cart.getId());
 
-        return buildOrderDetail(order);
+        // 11. Build response
+        OrderDetailDTO orderDetail = buildOrderDetail(order);
+
+        // 12. Gửi email xác nhận đặt hàng (async, không block response)
+        if (user.getEmailAddress() != null && !user.getEmailAddress().isBlank()) {
+            emailService.sendOrderConfirmationEmail(
+                    user.getEmailAddress(),
+                    user.getUsername(),
+                    orderDetail
+            );
+        }
+
+        return orderDetail;
     }
 
     @Override

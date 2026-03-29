@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xác nhận đặt hàng</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,'Helvetica Neue',sans-serif;">
+
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;">
+    <tr>
+      <td align="center" style="padding:30px 15px;">
+
+        <table width="600" cellpadding="0" cellspacing="0"
+               style="max-width:600px;background:#ffffff;border-radius:10px;
+                      overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.10);">
+
+          <!-- ================================================ -->
+          <!-- HEADER                                           -->
+          <!-- ================================================ -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+                       padding:32px;text-align:center;">
+              <div style="font-size:40px;margin-bottom:8px;">🛍️</div>
+              <h1 style="color:#ffffff;margin:0;font-size:26px;font-weight:700;letter-spacing:1px;">
+                Clothing Store
+              </h1>
+              <p style="color:rgba(255,255,255,0.80);margin:6px 0 0;font-size:13px;">
+                Thời trang chất lượng — Phong cách đỉnh cao
+              </p>
+            </td>
+          </tr>
+
+          <!-- ================================================ -->
+          <!-- SUCCESS BANNER                                   -->
+          <!-- ================================================ -->
+          <tr>
+            <td style="background:#f0fff4;border-bottom:3px solid #48bb78;
+                       padding:26px;text-align:center;">
+              <div style="font-size:48px;margin-bottom:10px;">✅</div>
+              <h2 style="color:#276749;margin:0;font-size:22px;font-weight:700;">
+                Đặt hàng thành công!
+              </h2>
+              <p style="color:#38a169;margin:10px 0 0;font-size:14px;">
+                Cảm ơn bạn đã tin tưởng và mua sắm tại Clothing Store ❤️
+              </p>
+            </td>
+          </tr>
+
+          <!-- ================================================ -->
+          <!-- BODY                                             -->
+          <!-- ================================================ -->
+          <tr>
+            <td style="padding:30px;">
+
+              <!-- Lời chào -->
+              <p style="margin:0 0 8px;font-size:16px;color:#2d3748;">
+                Xin chào <strong>{{CUSTOMER_NAME}}</strong>,
+              </p>
+              <p style="margin:0 0 26px;color:#718096;line-height:1.70;font-size:14px;">
+                Đơn hàng của bạn đã được tiếp nhận thành công.
+                Chúng tôi sẽ xử lý và thông báo ngay khi hàng được giao đến bạn.
+              </p>
+
+              <!-- ---- Thông tin đơn hàng ---- -->
+              <table width="100%" cellpadding="14" cellspacing="0"
+                     style="background:#f8f9ff;border:1px solid #e2e8f0;
+                            border-radius:8px;margin-bottom:28px;">
+                <tr>
+                  <td width="50%" style="border-right:1px solid #e2e8f0;">
+                    <div style="color:#a0aec0;font-size:11px;font-weight:600;
+                                text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">
+                      Mã đơn hàng
+                    </div>
+                    <div style="color:#2d3748;font-size:20px;font-weight:700;">
+                      {{ORDER_CODE}}
+                    </div>
+                  </td>
+                  <td width="50%" style="padding-left:18px;">
+                    <div style="color:#a0aec0;font-size:11px;font-weight:600;
+                                text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">
+                      Ngày đặt hàng
+                    </div>
+                    <div style="color:#2d3748;font-weight:600;font-size:14px;">
+                      {{ORDER_DATE}}
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="border-right:1px solid #e2e8f0;border-top:1px solid #e2e8f0;">
+                    <div style="color:#a0aec0;font-size:11px;font-weight:600;
+                                text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">
+                      Trạng thái
+                    </div>
+                    <span style="background:#fef3c7;color:#92400e;padding:4px 12px;
+                                 border-radius:20px;font-size:12px;font-weight:700;">
+                      ⏳ {{STATUS_NAME}}
+                    </span>
+                  </td>
+                  <td style="padding-left:18px;border-top:1px solid #e2e8f0;">
+                    <div style="color:#a0aec0;font-size:11px;font-weight:600;
+                                text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">
+                      Phương thức thanh toán
+                    </div>
+                    <div style="color:#2d3748;font-weight:600;font-size:14px;">
+                      {{PAYMENT_TYPE_NAME}}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- ---- Danh sách sản phẩm ---- -->
+              <h3 style="color:#2d3748;margin:0 0 14px;font-size:15px;font-weight:700;">
+                📦 Sản phẩm đã đặt
+              </h3>
+              <table width="100%" cellpadding="0" cellspacing="0"
+                     style="border-collapse:collapse;margin-bottom:22px;
+                            border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+                <thead>
+                  <tr style="background:#edf2f7;">
+                    <th style="padding:10px 14px;text-align:left;font-size:12px;
+                               color:#718096;font-weight:600;border-bottom:1px solid #e2e8f0;">
+                      Sản phẩm
+                    </th>
+                    <th style="padding:10px 14px;text-align:center;font-size:12px;
+                               color:#718096;font-weight:600;border-bottom:1px solid #e2e8f0;
+                               width:50px;">
+                      SL
+                    </th>
+                    <th style="padding:10px 14px;text-align:right;font-size:12px;
+                               color:#718096;font-weight:600;border-bottom:1px solid #e2e8f0;
+                               width:120px;">
+                      Đơn giá
+                    </th>
+                    <th style="padding:10px 14px;text-align:right;font-size:12px;
+                               color:#718096;font-weight:600;border-bottom:1px solid #e2e8f0;
+                               width:120px;">
+                      Thành tiền
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {{ITEMS_ROWS}}
+                </tbody>
+              </table>
+
+              <!-- ---- Tổng tiền ---- -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:26px;">
+                <tr>
+                  <td></td>
+                  <td width="290" style="border-top:1px solid #e2e8f0;padding-top:4px;">
+                    <table width="100%" cellpadding="8" cellspacing="0">
+                      <tr>
+                        <td style="color:#718096;font-size:14px;">Tạm tính:</td>
+                        <td style="text-align:right;color:#2d3748;font-size:14px;">{{SUBTOTAL}}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#718096;font-size:14px;">Phí vận chuyển:</td>
+                        <td style="text-align:right;color:#2d3748;font-size:14px;">{{SHIPPING_FEE}}</td>
+                      </tr>
+                      <tr>
+                        <td style="color:#2d3748;font-size:16px;font-weight:700;
+                                   border-top:2px solid #667eea;padding-top:12px;">
+                          Tổng cộng:
+                        </td>
+                        <td style="text-align:right;color:#667eea;font-size:18px;font-weight:700;
+                                   border-top:2px solid #667eea;padding-top:12px;">
+                          {{ORDER_TOTAL}}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- ---- Địa chỉ giao hàng (được build bằng Java) ---- -->
+              {{ADDRESS_SECTION}}
+
+              <!-- ---- QR / Chuyển khoản (được build bằng Java, trống nếu COD) ---- -->
+              {{QR_SECTION}}
+
+              <!-- ---- Ghi chú ---- -->
+              <div style="background:#fffbeb;border-left:4px solid #f6ad55;
+                          padding:14px 18px;border-radius:4px;margin-top:20px;">
+                <p style="margin:0;color:#7b341e;font-size:13px;line-height:1.65;">
+                  📞 Cần hỗ trợ? Hãy liên hệ với chúng tôi qua email hoặc hotline.
+                  Chúng tôi luôn sẵn sàng giúp bạn!
+                </p>
+              </div>
+
+            </td>
+          </tr>
+
+          <!-- ================================================ -->
+          <!-- FOOTER                                           -->
+          <!-- ================================================ -->
+          <tr>
+            <td style="background:#2d3748;padding:22px;text-align:center;">
+              <p style="color:#a0aec0;margin:0;font-size:13px;">
+                © 2026 Clothing Store. Tất cả quyền được bảo lưu.
+              </p>
+              <p style="color:#718096;margin:6px 0 0;font-size:11px;">
+                Email này được gửi tự động, vui lòng không trả lời trực tiếp.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+
