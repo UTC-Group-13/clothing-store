@@ -14,7 +14,7 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:root}
     password: ${SPRING_DATASOURCE_PASSWORD:123456}
     hikari:
-      # 0 = khong thu ket noi khi tao pool, cho den request dau tien ket noi
+      # 0 = khong thu ket noi khi tao pool, cho den request dau tien
       # Ngan app crash khi DB chua san sang luc startup
       initialization-fail-timeout: 0
       connection-timeout: 30000     # Cho toi da 30s de lay connection
