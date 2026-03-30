@@ -230,39 +230,39 @@ public class ChatServiceImpl implements ChatService {
 
     private String buildSystemPrompt(List<Product> products, Map<Integer, String> categoryMap, String username) {
         StringBuilder sb = new StringBuilder();
-        sb.append("Ban la tro ly mua sam thong minh cua cua hang thoi trang.\n");
-        sb.append("Nhiem vu: giup khach hang tim kiem va lua chon san pham phu hop.\n\n");
+        sb.append("Bạn là trợ lý mua sắm thông minh của cửa hàng thời trang.\n");
+        sb.append("Nhiệm vụ: giúp khách hàng tìm kiếm và lựa chọn sản phẩm phù hợp.\n\n");
 
         if (username != null && !username.isBlank()) {
-            sb.append("Khach hang: ").append(username).append("\n\n");
+            sb.append("Khách hàng: ").append(username).append("\n\n");
         }
 
         if (!products.isEmpty()) {
-            sb.append("SAN PHAM HIEN CO TRONG CUA HANG:\n");
+            sb.append("SẢN PHẨM HIỆN CÓ TRONG CỬA HÀNG:\n");
             for (Product p : products) {
                 sb.append(String.format(
-                        "• [ID:%d] %s | Gia: %,.0f VND | Danh muc: %s%s%s%s\n",
+                        "• [ID:%d] %s | Giá: %,.0f VND | Danh mục: %s%s%s%s\n",
                         p.getId(),
                         p.getName(),
                         p.getBasePrice(),
-                        categoryMap.getOrDefault(p.getCategoryId(), "Khac"),
-                        p.getBrand()    != null ? " | Thuong hieu: " + p.getBrand()    : "",
-                        p.getMaterial() != null ? " | Chat lieu: "   + p.getMaterial() : "",
+                        categoryMap.getOrDefault(p.getCategoryId(), "Khác"),
+                        p.getBrand()    != null ? " | Thương hiệu: " + p.getBrand()    : "",
+                        p.getMaterial() != null ? " | Chất liệu: "   + p.getMaterial() : "",
                         p.getDescription() != null
-                                ? " | Mo ta: " + p.getDescription().substring(0, Math.min(80, p.getDescription().length())) + "..."
+                                ? " | Mô tả: " + p.getDescription().substring(0, Math.min(80, p.getDescription().length())) + "..."
                                 : ""
                 ));
             }
         } else {
-            sb.append("Hien tai chua co san pham de goi y.\n");
+            sb.append("Hiện tại chưa có sản phẩm để gợi ý.\n");
         }
 
-        sb.append("\nHUONG DAN TRA LOI:\n");
-        sb.append("- Tra loi bang tieng Viet, than thien va tu nhien\n");
-        sb.append("- Tu van ve size, phoi do, chat lieu khi duoc hoi\n");
-        sb.append("- Neu goi y san pham, ghi ten va gia cu the\n");
-        sb.append("- Khong bịa san pham ngoai danh sach tren\n");
-        sb.append("- Giu cau tra loi ngan gon, toi da 200 tu\n");
+        sb.append("\nHƯỚNG DẪN TRẢ LỜI:\n");
+        sb.append("- Trả lời bằng tiếng Việt, thân thiện và tự nhiên\n");
+        sb.append("- Tư vấn về size, phối đồ, chất liệu khi được hỏi\n");
+        sb.append("- Nếu gợi ý sản phẩm, ghi tên và giá cụ thể\n");
+        sb.append("- Không đề xuất sản phẩm ngoài danh sách trên\n");
+        sb.append("- Giữ câu trả lời ngắn gọn, tối đa 200 từ\n");
 
         return sb.toString();
     }
