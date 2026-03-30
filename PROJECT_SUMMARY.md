@@ -368,7 +368,7 @@ docker-compose up -d
 
 | Service | Container | Port |
 |---|---|---|
-| MySQL 8.0 | `clothing-store-mysql` | `3307:3306` |
+| MySQL 8.0 | `clothing-store-mysql` | `3309:3306` |
 | Spring Boot App | `clothing-store-api` | `8080:8080` |
 
 **Volumes:**

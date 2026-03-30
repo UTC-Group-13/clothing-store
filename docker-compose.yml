@@ -12,14 +12,13 @@ services:
       MYSQL_USER: ${DB_USERNAME:-appuser}
       MYSQL_PASSWORD: ${DB_PASSWORD:-123456}
     ports:
-      - "3307:3306"
+      - "3309:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./ec/src/main/resources/init_sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - clothing_db_mysql_data:/var/lib/mysql
     networks:
       - clothing-store-network
     healthcheck:
-      test: ["CMD", "mysql", "-h", "localhost", "-uroot", "-p${DB_PASSWORD:-123456}", "clothing_db", "-e", "SELECT 1"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p${DB_PASSWORD:-123456} || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 15
@@ -31,7 +30,7 @@ services:
       context: ./ec
       dockerfile: Dockerfile
     container_name: clothing-store-api
-    restart: unless-stopped
+    restart: always
     depends_on:
       mysql:
         condition: service_healthy
