@@ -153,9 +153,11 @@ jobs:
             echo "=== [4/4] Start new container ==="
             mkdir -p /home/clothing-store/uploads/images
             mkdir -p /home/clothing-store/logs
+            docker network create clothing-store-network 2>/dev/null || true
 
             docker run -d \
               --name $CONTAINER_NAME \
+              --network clothing-store-network \
               --restart unless-stopped \
               -p 8080:8080 \
               -e SPRING_DATASOURCE_URL="${{ secrets.DB_URL }}" \
