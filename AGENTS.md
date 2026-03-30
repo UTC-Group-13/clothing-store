@@ -63,6 +63,7 @@ Xem chi tiết: `PRODUCT_FLOW.md`
 - `GET /api/shop-bank-accounts/active` (user xem để chuyển khoản)
 - `GET /api/reviews/product/**` (xem reviews sản phẩm)
 - `/swagger-ui/**`, `/v3/api-docs/**`, `/uploads/images/**`
+- `/actuator/**` (health, info, metrics)
 
 **Endpoints cần xác thực (JWT Bearer token):**
 - `/api/cart/**` (tất cả methods)
@@ -72,8 +73,9 @@ Xem chi tiết: `PRODUCT_FLOW.md`
 - Tất cả `POST/PUT/DELETE` cho products, categories, colors, sizes
 
 **Endpoints ADMIN only:**
-- `GET /api/orders/admin/**` (xem tất cả đơn)
-- `PATCH /api/orders/{id}/status` (cập nhật trạng thái đơn)
+- `GET /api/orders/admin/**` (xem tất cả đơn, lọc theo trạng thái)
+- `PATCH /api/orders/admin/{orderId}/status` (cập nhật trạng thái đơn)
+- `POST/PUT /api/products/full/**` (tạo/cập nhật sản phẩm đầy đủ)
 - Annotation: `@PreAuthorize("hasRole('ADMIN')")`
 
 ### Cách lấy user hiện tại trong Controller
@@ -254,7 +256,7 @@ Response:
 
 ---
 
-## 📊 Trạng Thái Dự Án (Cập nhật: 2026-03-25)
+## 📊 Trạng Thái Dự Án (Cập nhật: 2026-03-30)
 
 ### ✅ ĐÃ TRIỂN KẢI HOÀN CHỈNH (70%)
 
@@ -279,14 +281,15 @@ Response:
 - ✅ Xóa item (`DELETE /api/cart/items/{itemId}`)
 - ✅ Làm trống giỏ (`DELETE /api/cart`)
 
-#### 4. Order Management (7 endpoints)
+#### 4. Order Management (8 endpoints)
 - ✅ Đặt hàng từ giỏ (`POST /api/orders`) - tự động trừ tồn kho
 - ✅ Lịch sử đơn hàng (`GET /api/orders`)
 - ✅ Chi tiết đơn hàng (`GET /api/orders/{id}`)
 - ✅ Hủy đơn hàng (`PATCH /api/orders/{id}/cancel`) - hoàn trả tồn kho
 - ✅ [ADMIN] Xem tất cả đơn (`GET /api/orders/admin/all`)
+- ✅ [ADMIN] Lọc đơn theo trạng thái (`GET /api/orders/admin/by-status/{statusId}`)
 - ✅ [ADMIN] Chi tiết đơn bất kỳ (`GET /api/orders/admin/{id}`)
-- ✅ [ADMIN] Cập nhật trạng thái đơn (`PATCH /api/orders/{id}/status`)
+- ✅ [ADMIN] Cập nhật trạng thái đơn (`PATCH /api/orders/admin/{id}/status`)
 
 #### 5. User Address Management (5 endpoints)
 - ✅ Danh sách địa chỉ (`GET /api/addresses`)
@@ -308,6 +311,7 @@ Response:
 - ✅ Swagger UI Documentation
 - ✅ CORS Configuration (hỗ trợ frontend)
 - ✅ Global Exception Handler với i18n
+- ✅ CI/CD Pipeline (`.github/workflows/ci-cd.yml`) — build, test, Docker push
 
 #### 8. Product Reviews & Ratings (5 endpoints) ✨ MỚI
 - ✅ Tạo đánh giá (`POST /api/reviews`) — chỉ sau khi mua hàng
@@ -319,9 +323,21 @@ Response:
 #### 9. AI Chatbot Shopping Assistant (2 endpoints) ✨ MỚI
 - ✅ Gửi tin nhắn (`POST /api/chat/message`) — **không cần đăng nhập**
 - ✅ Xóa session (`DELETE /api/chat/session/{sessionId}`)
-- 🔌 Tích hợp Claude API (Anthropic) — `claude-3-haiku-20240307`
+- 🔌 Dual AI provider: **GitHub Models** (primary, miễn phí) → **Claude** (fallback)
 - 🧠 In-memory session (tối đa 20 tin nhắn, TTL 2 giờ)
-- 🔍 Tự động tìm sản phẩm liên quan từ DB làm context cho AI
+- 🔍 Tự động tìm sản phẩm liên quan từ DB làm context cho AI (dùng JPA Specification)
+
+#### 10. Email Notifications ✨ MỚI
+- ✅ Gửi email xác nhận đặt hàng (async, không block response)
+- ✅ HTML email template (`templates/email/order-confirmation.html`)
+- ✅ Async thread pool riêng (`AsyncConfig` → `emailTaskExecutor`)
+- 📧 SMTP Gmail (`spring-boot-starter-mail`)
+
+#### 11. Product Full Management (3 endpoints) ✨ MỚI
+- ✅ Tạo sản phẩm đầy đủ (`POST /api/products/full`) — Product + Variants + Stocks trong 1 request [ADMIN]
+- ✅ Cập nhật đầy đủ (`PUT /api/products/full/{id}`) — id có → update, id null → tạo mới [ADMIN]
+- ✅ Xem đầy đủ (`GET /api/products/full/{id}`) — public
+- 📝 DTO: `ProductFullRequest` (nested `VariantRequest` + `StockRequest`) → `ProductDetailResponse`
 
 ### ❌ CHƯA TRIỂN KHAI (6%)
 
@@ -329,11 +345,11 @@ Response:
 - ❌ CRUD khuyến mãi (discount %, fixed amount)
 - ❌ Áp dụng mã giảm giá vào đơn hàng
 - ❌ Khuyến mãi theo category
-- 📝 Entity đã có (`Promotion`, `PromotionCategory`), chưa có Service/Controller
+- 📝 Entity đã có (`Promotion`, `PromotionCategory`), `PromotionService` interface rỗng — chưa có logic/Controller
 
 #### 2. Advanced Features
 - ❌ Payment Gateway Integration (VNPAY, MoMo, ZaloPay)
-- ❌ Email notifications (đơn hàng, reset password)
+- ❌ Forgot/Reset Password (DTO đã có: `ForgotPasswordRequest`, `ResetPasswordRequest` — chưa có endpoint)
 - ❌ Inventory alerts (cảnh báo hết hàng)
 - ❌ Admin Analytics Dashboard
 - ❌ Product search nâng cao (full-text search, Elasticsearch)
@@ -467,7 +483,7 @@ public class Entity {
 
 ## 🔍 Tìm Hiểu Code Nhanh
 
-### 17 Controllers Hiện Có
+### 20 Controllers Hiện Có
 
 | Controller | Endpoints | Mô tả |
 |------------|-----------|-------|
@@ -476,10 +492,11 @@ public class Entity {
 | `ColorController` | 6 | CRUD màu sắc |
 | `SizeController` | 6 | CRUD kích cỡ |
 | `ProductController` | 8 | CRUD sản phẩm, search, filter |
+| `ProductManagementController` | 3 | Tạo/cập nhật/xem sản phẩm đầy đủ [ADMIN] ✨ |
 | `ProductVariantController` | 7 | CRUD biến thể theo màu |
 | `VariantStockController` | 8 | CRUD tồn kho theo size |
 | `CartController` | 5 | Quản lý giỏ hàng |
-| `OrderController` | 7 | Đặt hàng, xem đơn, hủy đơn |
+| `OrderController` | 8 | Đặt hàng, xem đơn, hủy đơn, ADMIN quản lý |
 | `UserAddressController` | 5 | Quản lý địa chỉ giao hàng |
 | `PaymentMethodController` | 5 | Quản lý phương thức thanh toán |
 | `PaymentTypeController` | 6 | CRUD loại thanh toán (COD, Bank...) |
@@ -488,8 +505,8 @@ public class Entity {
 | `ShopBankAccountController` | 6 | Tài khoản NH shop (ADMIN) |
 | `FileUploadController` | 1 | Upload ảnh sản phẩm |
 | `SampleDataController` | 1 | Tạo dữ liệu mẫu để test |
-| **`ChatController`** | **2** | **AI chatbot gợi ý sản phẩm (mới ✨)** |
-| `ReviewController` | 5 | Đánh giá sản phẩm (mới ✨) |
+| `ChatController` | 2 | AI chatbot gợi ý sản phẩm |
+| `ReviewController` | 5 | Đánh giá sản phẩm |
 
 ### Key Services Implemented
 
@@ -577,33 +594,42 @@ ec/
 │   │   │   ├── SecurityConfig.java            ★ Phân quyền endpoints
 │   │   │   ├── JwtService.java                ★ Generate/validate token
 │   │   │   └── CustomUserDetailsService.java
+│   │   ├── AsyncConfig.java                   ★ @EnableAsync + emailTaskExecutor
 │   │   ├── GlobalExceptionHandler.java        ★ Xử lý lỗi tập trung
 │   │   ├── WebMvcConfig.java                  ★ CORS + static resources
 │   │   ├── SwaggerConfig.java
 │   │   └── MessageConfig.java                 ★ i18n setup
-│   ├── controller/          (19 controllers)
-│   ├── service/             (19 interfaces)
-│   ├── service/impl/        (19 implementations)
-│   ├── repository/          (21 repositories)
-│   ├── entity/              (21 entities)
+│   ├── controller/          (20 controllers)
+│   ├── service/             (23 interfaces)
+│   ├── service/impl/        (21 implementations)
+│   ├── repository/          (23 repositories)
+│   │   └── spec/            ★ JPA Specifications (ProductSpecification)
+│   ├── entity/              (24 entities)
 │   ├── dto/
+│   │   ├── auth/            ★ LoginRequest, RegisterRequest, AuthResponse, PasswordRequest
 │   │   ├── chat/            ★ ChatRequest, ChatResponse, ProductSuggestionDTO
-│   │   └── (30+ other DTOs)
+│   │   └── (35+ other DTOs)
 │   ├── mapper/              (6 MapStruct mappers)
 │   └── exception/           (2 custom exceptions)
 ├── src/main/resources/
-│   ├── application.yml      ★ Cấu hình DB, JWT, upload, Claude AI
+│   ├── application.yml      ★ Cấu hình DB, JWT, upload, AI (dual provider), Mail
 │   ├── messages.properties  ★ Thông báo i18n
-│   └── init_sql/init.sql    ★ Schema database
+│   ├── init_sql/init.sql    ★ Schema database
+│   └── templates/email/     ★ HTML email templates
+│       └── order-confirmation.html
 └── pom.xml                  ★ Dependencies
 
 Thư mục gốc:
 ├── docker-compose.yml       ★ Local dev stack
+├── .env.example             ★ Template biến môi trường
+├── .github/workflows/ci-cd.yml ★ CI/CD Pipeline (build, test, Docker)
 ├── AGENTS.md               (file này)
 ├── README.md
 ├── PRODUCT_FLOW.md          ★ Hướng dẫn tạo sản phẩm từng bước
 ├── FRONTEND_API_GUIDE.md    ★ API reference cho FE (có hướng dẫn Chat AI)
-└── DATABASE_ANALYSIS.md     ★ Phân tích schema & FK
+├── DATABASE_ANALYSIS.md     ★ Phân tích schema & FK
+├── PAYMENT_FLOW.md          ★ Luồng thanh toán chi tiết
+└── *_USECASE.md             ★ Use case diagrams (Auth, Cart, Order, Review)
 ```
 
 ---
@@ -623,6 +649,8 @@ Thư mục gốc:
 8. **TRỪ TỒN KHO** cho mỗi VariantStock
 9. **XÓA SẠCH GIỎ HÀNG**
 10. Generate VietQR URL cho bank transfer
+11. Build `OrderDetailDTO` response
+12. **GỬI EMAIL XÁC NHẬN** (async, không block response)
 
 **⚠️ Toàn bộ dùng `@Transactional` - rollback nếu bất kỳ bước nào fail!**
 
@@ -673,30 +701,42 @@ dto/chat/ProductSuggestionDTO.java ← Gợi ý sản phẩm kèm thumbnail
 service/ChatService.java           ← Interface
 service/impl/ChatServiceImpl.java  ← Logic chính
 controller/ChatController.java     ← 2 endpoints
+repository/spec/ProductSpecification.java ← JPA Specification cho search
 ```
 
 **Luồng xử lý trong `ChatServiceImpl.chat()`:**
 ```
 1. cleanupOldSessions()             — dọn session hết hạn (TTL 2h)
 2. resolveSessionId()               — lấy/tạo UUID session
-3. searchRelevantProducts()         — query DB tìm sản phẩm liên quan
+3. searchRelevantProducts()         — query DB tìm sản phẩm liên quan (JPA Specification)
 4. buildCategoryMap()               — map categoryId → categoryName
 5. buildThumbnailMap()              — map productId → thumbnail URL
 6. Thêm user message vào history
 7. buildSystemPrompt()              — tạo prompt với danh sách sản phẩm thực
-8. callClaudeApi()                  — gọi api.anthropic.com/v1/messages
+8. callAI()                         — GitHub Models → Claude fallback (circuit breaker)
 9. Lưu AI response vào history      — trimHistory() nếu > 20 tin nhắn
 10. buildSuggestions()              — trả về top 5 sản phẩm gợi ý
 ```
 
-**Cấu hình cần thiết** (`application.yml` / env vars):
+**Dual AI Provider — Cấu hình** (`application.yml` / env vars):
 ```yaml
+# Primary: GitHub Models (miễn phí, dùng GitHub PAT token)
+ai:
+  provider: ${AI_PROVIDER:github}       # "github" hoặc "claude"
+  api:
+    key: ${AI_API_KEY:}                 # GitHub PAT token
+    model: ${AI_MODEL:gpt-4o-mini}      # gpt-4o-mini: 150 req/day miễn phí
+    max-tokens: ${AI_MAX_TOKENS:1024}
+
+# Fallback: Claude (cần credits Anthropic)
 claude:
   api:
-    key: ${CLAUDE_API_KEY:}          # BẮT BUỘC để AI hoạt động
-    model: claude-3-haiku-20240307   # Có thể đổi sang claude-3-5-sonnet
-    max-tokens: 1024
+    key: ${CLAUDE_API_KEY:}
+    model: ${CLAUDE_MODEL:claude-3-haiku-20240307}
+    max-tokens: ${CLAUDE_MAX_TOKENS:1024}
 ```
+
+**Circuit breaker:** Khi GitHub Models trả 429 (quota exhausted), tự chuyển sang Claude trong 1 giờ.
 
 **Fallback khi không có API key:**
 - Bot vẫn trả về danh sách sản phẩm gợi ý từ DB
@@ -715,6 +755,7 @@ claude:
 | `FRONTEND_API_GUIDE.md` | API reference đầy đủ với request/response examples |
 | `DATABASE_ANALYSIS.md` | Schema, relationships, constraints |
 | `PROJECT_SUMMARY.md` | Tổng quan tech stack, dependencies, deployment |
+| `PAYMENT_FLOW.md` | Luồng thanh toán chi tiết (VietQR, bank transfer) |
 
 **Swagger UI:** `http://localhost:8080/swagger-ui.html` - Test API trực quan
 

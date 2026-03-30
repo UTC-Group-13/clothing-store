@@ -77,7 +77,7 @@ jwt:
 file:
   upload:
     dir: ${FILE_UPLOAD_DIR:C:\CODE\uploads\images}      # Thu muc luu file tren disk
-    url-prefix: C:\CODE\uploads\images                # Prefix URL de FE truy cap anh
+    url-prefix: /uploads/images                # Prefix URL de FE truy cap anh
 
 # ============================================================
 # AI Chatbot Configuration

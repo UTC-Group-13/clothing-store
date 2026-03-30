@@ -45,7 +45,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - app_uploads:/app/uploads
+      - /home/utc/uploads/images:/app/uploads/images
       - app_logs:/app/logs
     networks:
       - clothing-store-network
@@ -59,8 +59,8 @@ services:
 volumes:
   mysql_data:
     driver: local
-  app_uploads:
-    driver: local
+  # app_uploads: (đã bỏ, mount trực tiếp host)
+  #   driver: local
   app_logs:
     driver: local
 
