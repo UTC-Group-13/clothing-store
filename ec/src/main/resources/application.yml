@@ -90,6 +90,14 @@ ai:
     model: ${AI_MODEL:gpt-4o-mini}                                   # gpt-4o-mini: 150 req/day mien phi
     max-tokens: ${AI_MAX_TOKENS:1024}
 
+# DeepSeek config (fallback sau GitHub Models)
+deepseek:
+  api:
+    url: ${DEEPSEEK_API_URL:https://api.ai-box.vn}
+    key: ${DEEPSEEK_API_KEY:sk-8hoe2l61eoKcXyW09Bd2Gu78pDORb7ee7aQQsm6bH92udNvQ}
+    model: ${DEEPSEEK_MODEL:deepseek-v4-pro}
+    max-tokens: ${DEEPSEEK_MAX_TOKENS:1024}
+
 # Giu lai Claude config de co the switch bang env var
 claude:
   api:
